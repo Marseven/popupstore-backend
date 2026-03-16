@@ -49,11 +49,6 @@ class EbillingService
         return 'Basic ' . base64_encode("{$username}:{$sharedKey}");
     }
 
-    private function mapProvider(string $provider): string
-    {
-        return config("ebilling.provider_map.{$provider}", $provider);
-    }
-
     private function markOrderAsPaid(Order $order): void
     {
         $order->update([
@@ -63,12 +58,12 @@ class EbillingService
         ]);
     }
 
-    public function createBill(Order $order, string $provider, string $phone): array
+    public function createBill(Order $order, string $phone): array
     {
         $transaction = PaymentTransaction::create([
             'order_id' => $order->id,
-            'provider' => $provider,
-            'payment_system' => $this->mapProvider($provider),
+            'provider' => null,
+            'payment_system' => null,
             'phone' => $phone,
             'amount' => $order->total,
             'currency' => config('ebilling.currency', 'XAF'),
@@ -77,8 +72,6 @@ class EbillingService
         ]);
 
         try {
-            $callbackUrl = $this->getConfig('ebilling_callback_url', 'callback_url');
-
             $response = Http::timeout(config('ebilling.timeout', 30))
                 ->withHeaders([
                     'Authorization' => $this->getAuthHeader(),
@@ -115,11 +108,10 @@ class EbillingService
                 $order->update([
                     'payment_reference' => $billId,
                     'payment_status' => 'processing',
-                    'payment_provider' => $provider,
                     'payment_phone' => $phone,
                 ]);
 
-                $paymentUrl = $this->getPaymentPortalUrl($billId, $callbackUrl);
+                $paymentUrl = $this->getPaymentPortalUrl($billId, $order->order_number);
 
                 return [
                     'success' => true,
@@ -156,56 +148,11 @@ class EbillingService
         }
     }
 
-    public function ussdPush(string $billId, string $phone, string $provider): array
-    {
-        try {
-            $response = Http::timeout(config('ebilling.timeout', 30))
-                ->withHeaders([
-                    'Authorization' => $this->getAuthHeader(),
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                ])
-                ->post($this->getApiBaseUrl() . "/api/v1/merchant/e_bills/{$billId}/ussd_push", [
-                    'payer_msisdn' => $phone,
-                    'payment_system_name' => $this->mapProvider($provider),
-                ]);
-
-            $data = $response->json();
-
-            Log::info('Ebilling ussdPush response', [
-                'bill_id' => $billId,
-                'status' => $response->status(),
-                'body' => $data,
-            ]);
-
-            if ($response->successful()) {
-                return [
-                    'success' => true,
-                    'message' => 'Push USSD envoyé. Veuillez confirmer sur votre téléphone.',
-                ];
-            }
-
-            return [
-                'success' => false,
-                'message' => $data['message'] ?? $data['error'] ?? 'Impossible d\'envoyer le push USSD',
-            ];
-        } catch (\Exception $e) {
-            Log::error('Ebilling ussdPush error', [
-                'bill_id' => $billId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Erreur de connexion au service de paiement',
-            ];
-        }
-    }
-
-    public function getPaymentPortalUrl(string $billId, ?string $redirectUrl = null): string
+    public function getPaymentPortalUrl(string $billId, string $orderNumber): string
     {
         $portalBase = $this->getPortalBaseUrl();
-        $redirect = $redirectUrl ?? $this->getConfig('ebilling_callback_url', 'callback_url');
+        $redirectUrl = $this->getConfig('ebilling_redirect_url', 'redirect_url');
+        $redirect = rtrim($redirectUrl, '/') . "/orders/{$orderNumber}?payment=return";
 
         return "{$portalBase}?invoice={$billId}&redirect_url=" . urlencode($redirect);
     }
@@ -233,13 +180,17 @@ class EbillingService
 
         $transaction->update([
             'status' => 'success',
+            'provider' => $paymentSystem,
             'payment_system' => $paymentSystem,
             'provider_response' => $payload,
             'completed_at' => now(),
         ]);
 
-        $this->markOrderAsPaid($transaction->order);
+        $order = $transaction->order;
+        $order->update(['payment_provider' => $paymentSystem]);
 
-        PaymentReceived::dispatch($transaction->order, $transaction);
+        $this->markOrderAsPaid($order);
+
+        PaymentReceived::dispatch($order, $transaction);
     }
 }

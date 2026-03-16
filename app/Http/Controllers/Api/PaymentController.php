@@ -4,9 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InitiatePaymentRequest;
-use App\Http\Requests\UssdPushRequest;
 use App\Models\Order;
-use App\Models\PaymentTransaction;
 use App\Services\EbillingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,51 +43,7 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $result = $this->ebillingService->createBill(
-            $order,
-            $validated['provider'],
-            $validated['phone']
-        );
-
-        return response()->json($result, $result['success'] ? 200 : 422);
-    }
-
-    /**
-     * Send a USSD push for an existing bill.
-     */
-    public function ussdPush(UssdPushRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-
-        $transaction = PaymentTransaction::where('transaction_id', $validated['bill_id'])->first();
-
-        if (!$transaction) {
-            return response()->json(['message' => 'Facture introuvable'], 404);
-        }
-
-        $order = $transaction->order;
-        $user = $request->user();
-        $sessionId = $request->header('X-Session-Id');
-
-        if ($user) {
-            if ($order->user_id !== $user->id) {
-                return response()->json(['message' => 'Non autorisé'], 403);
-            }
-        } else {
-            if ($order->session_id !== $sessionId && $order->guest_phone !== $validated['phone']) {
-                return response()->json(['message' => 'Non autorisé'], 403);
-            }
-        }
-
-        if ($transaction->status === 'success') {
-            return response()->json(['message' => 'Cette facture est déjà payée'], 422);
-        }
-
-        $result = $this->ebillingService->ussdPush(
-            $validated['bill_id'],
-            $validated['phone'],
-            $validated['provider']
-        );
+        $result = $this->ebillingService->createBill($order, $validated['phone']);
 
         return response()->json($result, $result['success'] ? 200 : 422);
     }

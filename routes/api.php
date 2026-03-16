@@ -95,7 +95,6 @@ Route::middleware('auth.optional')->group(function () {
 
     // Payments
     Route::post('/payments/initiate', [PaymentController::class, 'initiate']);
-    Route::post('/payments/ussd-push', [PaymentController::class, 'ussdPush']);
 });
 
 /*

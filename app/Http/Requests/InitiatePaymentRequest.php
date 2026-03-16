@@ -15,7 +15,6 @@ class InitiatePaymentRequest extends FormRequest
     {
         return [
             'order_number' => 'required|string|exists:orders,order_number',
-            'provider' => 'required|string|in:airtel,moov',
             'phone' => 'required|string|max:20',
         ];
     }
