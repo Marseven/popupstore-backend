@@ -24,9 +24,22 @@ class PaymentController extends Controller
             'phone' => 'required|string|max:20',
         ]);
 
-        $order = Order::where('order_number', $validated['order_number'])
-            ->where('user_id', $request->user()->id)
-            ->firstOrFail();
+        $user = $request->user();
+        $sessionId = $request->header('X-Session-Id');
+
+        $query = Order::where('order_number', $validated['order_number']);
+
+        if ($user) {
+            $query->where('user_id', $user->id);
+        } else {
+            $query->whereNull('user_id')
+                ->where(function ($q) use ($sessionId, $validated) {
+                    $q->where('session_id', $sessionId)
+                      ->orWhere('guest_phone', $validated['phone']);
+                });
+        }
+
+        $order = $query->firstOrFail();
 
         if ($order->payment_status === 'success') {
             return response()->json([
@@ -61,9 +74,17 @@ class PaymentController extends Controller
         }
 
         $order = $transaction->order;
+        $user = $request->user();
+        $sessionId = $request->header('X-Session-Id');
 
-        if ($order->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Non autorisé'], 403);
+        if ($user) {
+            if ($order->user_id !== $user->id) {
+                return response()->json(['message' => 'Non autorisé'], 403);
+            }
+        } else {
+            if ($order->session_id !== $sessionId && $order->guest_phone !== $validated['phone']) {
+                return response()->json(['message' => 'Non autorisé'], 403);
+            }
         }
 
         if ($transaction->status === 'success') {

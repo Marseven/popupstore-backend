@@ -18,20 +18,38 @@ class OrderController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
+        $user = $request->user();
+        $sessionId = $request->header('X-Session-Id');
+
+        $rules = [
             'shipping_name' => 'required|string|max:255',
             'shipping_phone' => 'required|string|max:20',
             'shipping_address' => 'required|string|max:500',
             'shipping_city' => 'required|string|max:100',
             'customer_notes' => 'nullable|string|max:1000',
-        ]);
+        ];
 
-        $user = $request->user();
+        if (!$user) {
+            $rules['guest_phone'] = 'required|string|max:20';
+            $rules['guest_email'] = 'nullable|email|max:255';
+        }
 
-        // Get cart items
-        $cartItems = CartItem::with(['product.images', 'product.mediaContent', 'size'])
-            ->where('user_id', $user->id)
-            ->get();
+        $validated = $request->validate($rules);
+
+        // Get cart items (auth or guest)
+        $cartQuery = CartItem::with(['product.images', 'product.mediaContent', 'size']);
+
+        if ($user) {
+            $cartQuery->where('user_id', $user->id);
+        } elseif ($sessionId) {
+            $cartQuery->whereNull('user_id')->where('session_id', $sessionId);
+        } else {
+            return response()->json([
+                'message' => 'Session invalide. Veuillez réessayer.',
+            ], 422);
+        }
+
+        $cartItems = $cartQuery->get();
 
         if ($cartItems->isEmpty()) {
             return response()->json([
@@ -40,7 +58,7 @@ class OrderController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($validated, $user, $cartItems) {
+            $order = DB::transaction(function () use ($validated, $user, $sessionId, $cartItems) {
                 // Calculate totals
                 $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
                 $shippingFee = 0; // Can be configured later
@@ -48,7 +66,10 @@ class OrderController extends Controller
 
                 // Create order
                 $order = Order::create([
-                    'user_id' => $user->id,
+                    'user_id' => $user?->id,
+                    'guest_phone' => $validated['guest_phone'] ?? null,
+                    'guest_email' => $validated['guest_email'] ?? null,
+                    'session_id' => $user ? null : $sessionId,
                     'status' => 'pending',
                     'subtotal' => $subtotal,
                     'shipping_fee' => $shippingFee,
@@ -88,7 +109,11 @@ class OrderController extends Controller
                 }
 
                 // Clear cart
-                CartItem::where('user_id', $user->id)->delete();
+                if ($user) {
+                    CartItem::where('user_id', $user->id)->delete();
+                } else {
+                    CartItem::whereNull('user_id')->where('session_id', $sessionId)->delete();
+                }
 
                 return $order;
             });
@@ -125,10 +150,50 @@ class OrderController extends Controller
      */
     public function show(Request $request, string $orderNumber): JsonResponse
     {
-        $order = Order::where('order_number', $orderNumber)
-            ->where('user_id', $request->user()->id)
+        $user = $request->user();
+        $sessionId = $request->header('X-Session-Id');
+
+        $query = Order::where('order_number', $orderNumber)
+            ->with(['items', 'transactions']);
+
+        if ($user) {
+            $query->where('user_id', $user->id);
+        } elseif ($sessionId) {
+            $query->whereNull('user_id')->where('session_id', $sessionId);
+        } else {
+            abort(404);
+        }
+
+        $order = $query->firstOrFail();
+
+        return response()->json([
+            'order' => $order,
+        ]);
+    }
+
+    /**
+     * Track a guest order by phone + order number.
+     */
+    public function track(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'phone' => 'required|string|max:20',
+            'order_number' => 'required|string|max:50',
+        ]);
+
+        $order = Order::where('order_number', $validated['order_number'])
+            ->where(function ($q) use ($validated) {
+                $q->where('guest_phone', $validated['phone'])
+                  ->orWhere('shipping_phone', $validated['phone']);
+            })
             ->with(['items', 'transactions'])
-            ->firstOrFail();
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'message' => 'Aucune commande trouvée avec ces informations',
+            ], 404);
+        }
 
         return response()->json([
             'order' => $order,

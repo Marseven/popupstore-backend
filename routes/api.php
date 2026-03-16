@@ -63,6 +63,25 @@ Route::delete('/cart', [CartController::class, 'clear']);
 // Payment callback (webhook - no auth)
 Route::post('/payments/callback', [PaymentController::class, 'callback']);
 
+// Order tracking (public - guest access by phone + order number)
+Route::get('/orders/track', [OrderController::class, 'track']);
+
+/*
+|--------------------------------------------------------------------------
+| Optional Auth Routes (authenticated or guest)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth.optional')->group(function () {
+    // Orders (create & view single)
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders/{orderNumber}', [OrderController::class, 'show']);
+
+    // Payments
+    Route::post('/payments/initiate', [PaymentController::class, 'initiate']);
+    Route::post('/payments/ussd-push', [PaymentController::class, 'ussdPush']);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Routes
@@ -76,14 +95,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
     Route::put('/auth/password', [AuthController::class, 'changePassword']);
 
-    // Orders
+    // Orders (history - authenticated only)
     Route::get('/orders', [OrderController::class, 'index']);
-    Route::post('/orders', [OrderController::class, 'store']);
-    Route::get('/orders/{orderNumber}', [OrderController::class, 'show']);
-
-    // Payments
-    Route::post('/payments/initiate', [PaymentController::class, 'initiate']);
-    Route::post('/payments/ussd-push', [PaymentController::class, 'ussdPush']);
 
     /*
     |--------------------------------------------------------------------------

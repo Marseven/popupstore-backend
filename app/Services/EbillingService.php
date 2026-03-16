@@ -84,8 +84,8 @@ class EbillingService
                 ])
                 ->post($this->getApiBaseUrl() . '/api/v1/merchant/e_bills', [
                     'payer_msisdn' => $phone,
-                    'payer_name' => $order->shipping_name ?? $order->user->name ?? 'Client',
-                    'payer_email' => $order->user->email ?? '',
+                    'payer_name' => $order->shipping_name ?? $order->user?->name ?? 'Client',
+                    'payer_email' => $order->guest_email ?? $order->user?->email ?? '',
                     'amount' => (int) $order->total,
                     'short_description' => 'Commande ' . $order->order_number,
                     'external_reference' => $order->order_number,
