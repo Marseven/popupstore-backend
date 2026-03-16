@@ -41,6 +41,7 @@ class SettingsSeeder extends Seeder
             ['key' => 'ebilling_mode', 'value' => 'lab', 'type' => 'string', 'group_name' => 'payment'],
             ['key' => 'ebilling_username', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
             ['key' => 'ebilling_shared_key', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
+            ['key' => 'ebilling_redirect_url', 'value' => 'https://popupstore.ga', 'type' => 'string', 'group_name' => 'payment'],
 
             // Advanced
             ['key' => 'maintenance_mode', 'value' => '0', 'type' => 'boolean', 'group_name' => 'advanced'],

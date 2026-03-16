@@ -35,10 +35,10 @@ class SettingController extends Controller
         ]);
 
         foreach ($request->settings as $item) {
-            $setting = Setting::where('key', $item['key'])->first();
-            if ($setting) {
-                $setting->update(['value' => $item['value'] ?? '']);
-            }
+            Setting::updateOrCreate(
+                ['key' => $item['key']],
+                ['value' => $item['value'] ?? '']
+            );
         }
 
         // Clear checkout data cache (payment methods, shipping thresholds)
