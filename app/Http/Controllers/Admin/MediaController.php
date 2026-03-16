@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreMediaRequest;
+use App\Http\Requests\Admin\UpdateMediaRequest;
 use App\Models\MediaContent;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
@@ -52,17 +54,9 @@ class MediaController extends Controller
     /**
      * Create media content with file upload and QR code generation.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreMediaRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'type' => 'required|string|in:audio,video',
-            'collection_id' => 'nullable|integer|exists:collections,id',
-            'file' => 'required|file|max:512000', // 500MB max
-            'thumbnail' => 'nullable|image|max:5120',
-            'is_active' => 'sometimes|boolean',
-        ]);
+        $validated = $request->validated();
 
         try {
             // Store the media file
@@ -132,17 +126,10 @@ class MediaController extends Controller
     /**
      * Update media content details.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateMediaRequest $request, int $id): JsonResponse
     {
         $media = MediaContent::findOrFail($id);
-
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'collection_id' => 'nullable|integer|exists:collections,id',
-            'is_active' => 'sometimes|boolean',
-            'thumbnail' => 'nullable|image|max:5120',
-        ]);
+        $validated = $request->validated();
 
         // Update slug if title changed
         if (isset($validated['title']) && $validated['title'] !== $media->title) {

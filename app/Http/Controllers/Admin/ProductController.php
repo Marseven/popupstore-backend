@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreProductRequest;
+use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductStock;
@@ -50,29 +52,9 @@ class ProductController extends Controller
     /**
      * Create a new product with images and stock entries.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreProductRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|max:100|unique:products,sku',
-            'price' => 'required|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0',
-            'description' => 'nullable|string',
-            'category_id' => 'nullable|integer|exists:product_categories,id',
-            'collection_id' => 'nullable|integer|exists:collections,id',
-            'media_content_id' => 'nullable|integer|exists:media_contents,id',
-            'is_active' => 'sometimes|boolean',
-            'is_featured' => 'sometimes|boolean',
-            'sort_order' => 'sometimes|integer',
-            'images' => 'nullable|array|max:4',
-            'images.*' => 'image|max:5120',
-            'primary_image_index' => 'nullable|integer|min:0',
-            'stocks' => 'nullable|array',
-            'stocks.*.size_id' => 'required_with:stocks|integer|exists:sizes,id',
-            'stocks.*.quantity' => 'required_with:stocks|integer|min:0',
-            'stocks.*.low_stock_threshold' => 'nullable|integer|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
             $product = DB::transaction(function () use ($validated, $request) {
@@ -147,29 +129,10 @@ class ProductController extends Controller
     /**
      * Update a product.
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateProductRequest $request, int $id): JsonResponse
     {
         $product = Product::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'sku' => 'sometimes|string|max:100|unique:products,sku,' . $product->id,
-            'price' => 'sometimes|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
-            'cost_price' => 'nullable|numeric|min:0',
-            'description' => 'nullable|string',
-            'category_id' => 'nullable|integer|exists:product_categories,id',
-            'collection_id' => 'nullable|integer|exists:collections,id',
-            'media_content_id' => 'nullable|integer|exists:media_contents,id',
-            'is_active' => 'sometimes|boolean',
-            'is_featured' => 'sometimes|boolean',
-            'sort_order' => 'sometimes|integer',
-            'images' => 'nullable|array',
-            'images.*' => 'image|max:5120',
-            'primary_image_index' => 'nullable|integer|min:0',
-            'remove_image_ids' => 'nullable|array',
-            'remove_image_ids.*' => 'integer|exists:product_images,id',
-        ]);
+        $validated = $request->validated();
 
         // Check max 4 images: (existing - removed + new) <= 4
         $existingCount = $product->images()->count();

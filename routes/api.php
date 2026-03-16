@@ -14,6 +14,15 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Api\HealthController;
+
+/*
+|--------------------------------------------------------------------------
+| Health Check
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/health', HealthController::class);
 
 /*
 |--------------------------------------------------------------------------
@@ -21,9 +30,11 @@ use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 |--------------------------------------------------------------------------
 */
 
-// Auth
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+// Auth (rate limited: 5 attempts/min)
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login']);
+});
 
 // Products (public)
 Route::get('/products', [ProductController::class, 'index']);
@@ -75,7 +86,7 @@ Route::get('/orders/track', [OrderController::class, 'track']);
 Route::middleware('auth.optional')->group(function () {
     // Orders (create & view single)
     Route::post('/orders', [OrderController::class, 'store']);
-    Route::get('/orders/{orderNumber}', [OrderController::class, 'show']);
+    Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->where('orderNumber', 'POP-.*');
 
     // Payments
     Route::post('/payments/initiate', [PaymentController::class, 'initiate']);

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\InitiatePaymentRequest;
+use App\Http\Requests\UssdPushRequest;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Services\EbillingService;
@@ -16,13 +18,9 @@ class PaymentController extends Controller
     /**
      * Initiate a payment (create a bill) for an order.
      */
-    public function initiate(Request $request): JsonResponse
+    public function initiate(InitiatePaymentRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'order_number' => 'required|string|exists:orders,order_number',
-            'provider' => 'required|string|in:airtel,moov',
-            'phone' => 'required|string|max:20',
-        ]);
+        $validated = $request->validated();
 
         $user = $request->user();
         $sessionId = $request->header('X-Session-Id');
@@ -59,13 +57,9 @@ class PaymentController extends Controller
     /**
      * Send a USSD push for an existing bill.
      */
-    public function ussdPush(Request $request): JsonResponse
+    public function ussdPush(UssdPushRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'bill_id' => 'required|string',
-            'phone' => 'required|string|max:20',
-            'provider' => 'required|string|in:airtel,moov',
-        ]);
+        $validated = $request->validated();
 
         $transaction = PaymentTransaction::where('transaction_id', $validated['bill_id'])->first();
 

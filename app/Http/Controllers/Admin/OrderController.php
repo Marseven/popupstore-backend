@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateOrderStatusRequest;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,13 +71,10 @@ class OrderController extends Controller
     /**
      * Update order status with validation of status transitions.
      */
-    public function updateStatus(Request $request, int $id): JsonResponse
+    public function updateStatus(UpdateOrderStatusRequest $request, int $id): JsonResponse
     {
         $order = Order::findOrFail($id);
-
-        $validated = $request->validate([
-            'status' => 'required|string|in:pending,paid,processing,shipped,delivered,cancelled',
-        ]);
+        $validated = $request->validated();
 
         $allowedTransitions = [
             'pending' => ['paid', 'processing', 'cancelled'],

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreOrderRequest;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -16,25 +17,11 @@ class OrderController extends Controller
     /**
      * Create order from cart items.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreOrderRequest $request): JsonResponse
     {
         $user = $request->user();
         $sessionId = $request->header('X-Session-Id');
-
-        $rules = [
-            'shipping_name' => 'required|string|max:255',
-            'shipping_phone' => 'required|string|max:20',
-            'shipping_address' => 'required|string|max:500',
-            'shipping_city' => 'required|string|max:100',
-            'customer_notes' => 'nullable|string|max:1000',
-        ];
-
-        if (!$user) {
-            $rules['guest_phone'] = 'required|string|max:20';
-            $rules['guest_email'] = 'nullable|email|max:255';
-        }
-
-        $validated = $request->validate($rules);
+        $validated = $request->validated();
 
         // Get cart items (auth or guest)
         $cartQuery = CartItem::with(['product.images', 'product.mediaContent', 'size']);
@@ -79,6 +66,7 @@ class OrderController extends Controller
                     'shipping_phone' => $validated['shipping_phone'],
                     'shipping_address' => $validated['shipping_address'],
                     'shipping_city' => $validated['shipping_city'],
+                    'payment_method' => $validated['payment_method'] ?? null,
                     'payment_status' => 'pending',
                     'customer_notes' => $validated['customer_notes'] ?? null,
                 ]);
