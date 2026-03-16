@@ -72,11 +72,13 @@ Route::get('/media/{uuid}', [MediaContentController::class, 'show']);
 Route::get('/media/{uuid}/stream', [MediaContentController::class, 'stream'])->name('media.stream');
 
 // Cart (public - uses session or auth)
-Route::get('/cart', [CartController::class, 'index']);
-Route::post('/cart', [CartController::class, 'store']);
-Route::put('/cart/{id}', [CartController::class, 'update']);
-Route::delete('/cart/{id}', [CartController::class, 'destroy']);
-Route::delete('/cart', [CartController::class, 'clear']);
+Route::middleware('auth.optional')->group(function () {
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart', [CartController::class, 'store']);
+    Route::put('/cart/{id}', [CartController::class, 'update']);
+    Route::delete('/cart/{id}', [CartController::class, 'destroy']);
+    Route::delete('/cart', [CartController::class, 'clear']);
+});
 
 // Payment callback (webhook - no auth)
 Route::post('/payments/callback', [PaymentController::class, 'callback']);

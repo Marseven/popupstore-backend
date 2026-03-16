@@ -132,6 +132,7 @@ class CartController extends Controller
 
     /**
      * Get user ID and session ID from request.
+     * When an authenticated user has a session_id, merge any guest cart items first.
      *
      * @return array{0: int|null, 1: string|null}
      */
@@ -139,6 +140,10 @@ class CartController extends Controller
     {
         $userId = $request->user()?->id;
         $sessionId = $request->header('X-Session-Id');
+
+        if ($userId && $sessionId) {
+            $this->cartService->mergeSessionCart($sessionId, $userId);
+        }
 
         return [$userId, $sessionId];
     }
