@@ -9,6 +9,8 @@ use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductStock;
+use App\Models\Setting;
+use App\Models\ShippingCity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +51,16 @@ class OrderController extends Controller
             $order = DB::transaction(function () use ($validated, $user, $sessionId, $cartItems) {
                 // Calculate totals
                 $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
-                $shippingFee = 0; // Can be configured later
+
+                // Dynamic shipping fee from zones
+                $shippingFee = ShippingCity::getShippingFee($validated['shipping_city']) ?? 0;
+
+                // Free shipping threshold
+                $freeThreshold = (float) Setting::get('free_shipping_threshold', 0);
+                if ($freeThreshold > 0 && $subtotal >= $freeThreshold) {
+                    $shippingFee = 0;
+                }
+
                 $total = $subtotal + $shippingFee;
 
                 // Create order
@@ -67,6 +78,7 @@ class OrderController extends Controller
                     'shipping_phone' => $validated['shipping_phone'],
                     'shipping_address' => $validated['shipping_address'],
                     'shipping_city' => $validated['shipping_city'],
+                    'shipping_quartier' => $validated['shipping_quartier'] ?? null,
                     'payment_method' => $validated['payment_method'] ?? null,
                     'payment_status' => 'pending',
                     'customer_notes' => $validated['customer_notes'] ?? null,

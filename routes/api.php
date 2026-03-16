@@ -16,6 +16,8 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Api\ShippingController;
+use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
 use App\Http\Controllers\Api\HealthController;
 use Illuminate\Support\Facades\Cache;
 
@@ -79,6 +81,10 @@ Route::delete('/cart', [CartController::class, 'clear']);
 // Payment callback (webhook - no auth)
 Route::post('/payments/callback', [PaymentController::class, 'callback']);
 
+// Shipping (public)
+Route::get('/shipping/cities', [ShippingController::class, 'cities']);
+Route::post('/shipping/calculate', [ShippingController::class, 'calculateFee']);
+
 // Order tracking (public - guest access by phone + order number)
 Route::get('/orders/track', [OrderController::class, 'track']);
 
@@ -130,6 +136,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/products/{id}', [AdminProductController::class, 'update']);
         Route::delete('/products/{id}', [AdminProductController::class, 'destroy']);
         Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
+
+        // Shipping zones management
+        Route::get('/shipping-zones', [AdminShippingZoneController::class, 'index']);
+        Route::post('/shipping-zones', [AdminShippingZoneController::class, 'store']);
+        Route::get('/shipping-zones/{id}', [AdminShippingZoneController::class, 'show']);
+        Route::put('/shipping-zones/{id}', [AdminShippingZoneController::class, 'update']);
+        Route::delete('/shipping-zones/{id}', [AdminShippingZoneController::class, 'destroy']);
 
         // Orders management
         Route::get('/orders', [AdminOrderController::class, 'index']);

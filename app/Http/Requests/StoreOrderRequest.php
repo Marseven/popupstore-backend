@@ -18,6 +18,7 @@ class StoreOrderRequest extends FormRequest
             'shipping_phone' => 'required|string|max:20',
             'shipping_address' => 'required|string|max:500',
             'shipping_city' => 'required|string|max:100',
+            'shipping_quartier' => 'nullable|string|max:100',
             'customer_notes' => 'nullable|string|max:1000',
             'payment_method' => 'nullable|string|max:50',
         ];

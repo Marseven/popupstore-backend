@@ -32,6 +32,7 @@ class Order extends Model
         'shipping_phone',
         'shipping_address',
         'shipping_city',
+        'shipping_quartier',
         'payment_method',
         'payment_provider',
         'payment_phone',

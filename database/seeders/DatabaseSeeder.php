@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             FakeDataSeeder::class,
             SettingsSeeder::class,
+            ShippingZonesSeeder::class,
         ]);
     }
 }
