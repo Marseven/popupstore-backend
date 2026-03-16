@@ -17,7 +17,7 @@ class ShippingController extends Controller
      */
     public function cities(): JsonResponse
     {
-        $data = Cache::remember('shipping.cities', 600, function () {
+        $data = Cache::remember('shipping.checkout_data', 600, function () {
             $zones = ShippingZone::active()
                 ->with(['cities' => fn($q) => $q->active()->orderBy('name')])
                 ->get();
@@ -27,6 +27,10 @@ class ShippingController extends Controller
             return [
                 'zones' => $zones,
                 'free_shipping_threshold' => (float) $freeThreshold,
+                'payment_methods' => [
+                    'ebilling' => Setting::get('payment_ebilling_active', '1') === '1',
+                    'cod' => Setting::get('payment_cod_active', '0') === '1',
+                ],
             ];
         });
 

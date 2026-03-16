@@ -42,7 +42,7 @@ class ShippingZoneController extends Controller
             }
         }
 
-        Cache::forget('shipping.cities');
+        Cache::forget('shipping.checkout_data');
 
         return response()->json([
             'message' => 'Zone créée avec succès',
@@ -84,7 +84,7 @@ class ShippingZoneController extends Controller
             }
         }
 
-        Cache::forget('shipping.cities');
+        Cache::forget('shipping.checkout_data');
 
         return response()->json([
             'message' => 'Zone mise à jour',
@@ -97,7 +97,7 @@ class ShippingZoneController extends Controller
         $zone = ShippingZone::findOrFail($id);
         $zone->delete();
 
-        Cache::forget('shipping.cities');
+        Cache::forget('shipping.checkout_data');
 
         return response()->json(['message' => 'Zone supprimée']);
     }

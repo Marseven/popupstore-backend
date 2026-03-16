@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class SettingController extends Controller
@@ -39,6 +40,9 @@ class SettingController extends Controller
                 $setting->update(['value' => $item['value'] ?? '']);
             }
         }
+
+        // Clear checkout data cache (payment methods, shipping thresholds)
+        Cache::forget('shipping.checkout_data');
 
         return response()->json(['message' => 'Paramètres mis à jour avec succès']);
     }

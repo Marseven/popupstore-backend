@@ -36,6 +36,8 @@ class SettingsSeeder extends Seeder
             ['key' => 'social_tiktok', 'value' => '', 'type' => 'string', 'group_name' => 'social'],
 
             // Payment
+            ['key' => 'payment_ebilling_active', 'value' => '1', 'type' => 'boolean', 'group_name' => 'payment'],
+            ['key' => 'payment_cod_active', 'value' => '0', 'type' => 'boolean', 'group_name' => 'payment'],
             ['key' => 'ebilling_mode', 'value' => 'lab', 'type' => 'string', 'group_name' => 'payment'],
             ['key' => 'ebilling_username', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
             ['key' => 'ebilling_shared_key', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
