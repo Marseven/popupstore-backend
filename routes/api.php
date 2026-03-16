@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Admin\PushSubscriptionController as AdminPushController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
@@ -128,6 +130,16 @@ Route::middleware('auth:sanctum')->group(function () {
     */
 
     Route::prefix('admin')->middleware('role:super_admin,manager')->group(function () {
+        // Notifications
+        Route::get('/notifications', [AdminNotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [AdminNotificationController::class, 'unreadCount']);
+        Route::post('/notifications/read-all', [AdminNotificationController::class, 'markAllAsRead']);
+        Route::post('/notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
+
+        // Push subscriptions
+        Route::post('/push/subscribe', [AdminPushController::class, 'subscribe']);
+        Route::post('/push/unsubscribe', [AdminPushController::class, 'unsubscribe']);
+
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index']);
 

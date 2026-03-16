@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasPermissions, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, HasPermissions, HasPushSubscriptions, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.

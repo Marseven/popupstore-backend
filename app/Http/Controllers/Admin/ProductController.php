@@ -8,6 +8,8 @@ use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductStock;
+use App\Notifications\LowStockNotification;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -257,8 +259,10 @@ class ProductController extends Controller
             'stocks.*.low_stock_threshold' => 'nullable|integer|min:0',
         ]);
 
+        $notificationService = app(NotificationService::class);
+
         foreach ($validated['stocks'] as $stockData) {
-            ProductStock::updateOrCreate(
+            $stock = ProductStock::updateOrCreate(
                 [
                     'product_id' => $product->id,
                     'size_id' => $stockData['size_id'],
@@ -268,6 +272,13 @@ class ProductController extends Controller
                     'low_stock_threshold' => $stockData['low_stock_threshold'] ?? 5,
                 ]
             );
+
+            if ($stock->is_low_stock) {
+                $sizeName = $stock->size?->name ?? 'N/A';
+                $notificationService->notifyAdmins(
+                    new LowStockNotification($product, $sizeName, $stock->quantity)
+                );
+            }
         }
 
         return response()->json([
