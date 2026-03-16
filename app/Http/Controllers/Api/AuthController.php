@@ -40,7 +40,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Inscription réussie',
-            'user' => $user->load('role'),
+            'user' => $user->load('role.permissions'),
             'token' => $token,
         ], 201);
     }
@@ -80,7 +80,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Connexion réussie',
-            'user' => $user->load('role'),
+            'user' => $user->load('role.permissions'),
             'token' => $token,
         ]);
     }
@@ -114,7 +114,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Profil mis à jour',
-            'user' => $user->fresh()->load('role'),
+            'user' => $user->fresh()->load('role.permissions'),
         ]);
     }
 

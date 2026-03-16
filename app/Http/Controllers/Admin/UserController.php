@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,18 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = User::with('role');
+
+        // Scope filter: client vs admin
+        if ($request->filled('scope')) {
+            $customerRole = Role::where('slug', 'customer')->first();
+            if ($customerRole) {
+                if ($request->scope === 'client') {
+                    $query->where('role_id', $customerRole->id);
+                } elseif ($request->scope === 'admin') {
+                    $query->where('role_id', '!=', $customerRole->id);
+                }
+            }
+        }
 
         // Filter by role
         if ($request->filled('role_id')) {
@@ -72,6 +85,19 @@ class UserController extends Controller
             'role_id' => 'sometimes|integer|exists:roles,id',
             'is_active' => 'sometimes|boolean',
         ]);
+
+        // Prevent removing the last super_admin
+        if (isset($validated['role_id']) && $user->role?->slug === 'super_admin') {
+            $superAdminRole = Role::where('slug', 'super_admin')->first();
+            if ($superAdminRole && $validated['role_id'] != $superAdminRole->id) {
+                $superAdminCount = User::where('role_id', $superAdminRole->id)->count();
+                if ($superAdminCount <= 1) {
+                    return response()->json([
+                        'message' => 'Impossible de retirer le dernier super administrateur',
+                    ], 422);
+                }
+            }
+        }
 
         $user->update($validated);
 

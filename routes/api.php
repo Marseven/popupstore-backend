@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\RoleController as AdminRoleController;
+use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Api\HealthController;
 use Illuminate\Support\Facades\Cache;
@@ -151,6 +153,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/users/{id}', [AdminUserController::class, 'show']);
             Route::put('/users/{id}', [AdminUserController::class, 'update']);
             Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+        });
+
+        // Roles & Permissions management (super_admin only)
+        Route::middleware('role:super_admin')->group(function () {
+            Route::get('/roles', [AdminRoleController::class, 'index']);
+            Route::post('/roles', [AdminRoleController::class, 'store']);
+            Route::get('/roles/{id}', [AdminRoleController::class, 'show']);
+            Route::put('/roles/{id}', [AdminRoleController::class, 'update']);
+            Route::delete('/roles/{id}', [AdminRoleController::class, 'destroy']);
+            Route::get('/permissions', [AdminPermissionController::class, 'index']);
         });
 
         // Settings (super_admin only)
