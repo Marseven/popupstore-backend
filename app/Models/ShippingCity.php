@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
 class ShippingCity extends Model
 {
     protected $fillable = [
-        'shipping_zone_id',
         'name',
         'is_active',
+        'sort_order',
     ];
 
     protected function casts(): array
@@ -21,30 +21,13 @@ class ShippingCity extends Model
         ];
     }
 
-    public function zone(): BelongsTo
+    public function zones(): HasMany
     {
-        return $this->belongsTo(ShippingZone::class, 'shipping_zone_id');
+        return $this->hasMany(ShippingZone::class)->orderBy('sort_order');
     }
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Lookup shipping fee by city name.
-     */
-    public static function getShippingFee(string $cityName): ?float
-    {
-        $city = static::active()
-            ->whereRaw('LOWER(name) = ?', [mb_strtolower($cityName)])
-            ->with('zone')
-            ->first();
-
-        if (!$city || !$city->zone || !$city->zone->is_active) {
-            return null;
-        }
-
-        return (float) $city->zone->fee;
+        return $query->where('is_active', true)->orderBy('sort_order');
     }
 }

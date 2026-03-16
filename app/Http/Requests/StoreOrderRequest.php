@@ -17,10 +17,12 @@ class StoreOrderRequest extends FormRequest
             'shipping_name' => 'required|string|max:255',
             'shipping_phone' => 'required|string|max:20',
             'shipping_address' => 'nullable|string|max:500',
-            'shipping_city' => 'required|string|max:100',
+            'shipping_city' => 'nullable|string|max:100',
+            'shipping_zone_id' => 'nullable|integer|exists:shipping_zones,id',
             'shipping_quartier' => 'nullable|string|max:100',
             'customer_notes' => 'nullable|string|max:1000',
             'payment_method' => 'nullable|string|max:50',
+            'wants_delivery' => 'boolean',
         ];
 
         if (!$this->user()) {

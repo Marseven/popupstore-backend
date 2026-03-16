@@ -10,52 +10,71 @@ class ShippingZonesSeeder extends Seeder
 {
     public function run(): void
     {
-        $zones = [
+        $cities = [
             [
-                'name' => 'Libreville & environs',
-                'fee' => 1000,
+                'name' => 'Libreville',
                 'sort_order' => 1,
-                'cities' => ['Libreville', 'Owendo', 'Akanda', 'Ntoum'],
+                'zones' => [
+                    ['name' => 'Centre-ville', 'fee' => 1000, 'sort_order' => 1],
+                    ['name' => 'Périphérie', 'fee' => 1500, 'sort_order' => 2],
+                    ['name' => 'Banlieue', 'fee' => 2000, 'sort_order' => 3],
+                ],
             ],
             [
-                'name' => 'Estuaire élargi',
-                'fee' => 1500,
+                'name' => 'Owendo',
                 'sort_order' => 2,
-                'cities' => ['Kango', 'Cocobeach', 'Cap Estérias'],
+                'zones' => [
+                    ['name' => 'Centre', 'fee' => 1500, 'sort_order' => 1],
+                    ['name' => 'Périphérie', 'fee' => 2000, 'sort_order' => 2],
+                ],
             ],
             [
-                'name' => 'Port-Gentil & Ouest',
-                'fee' => 2500,
+                'name' => 'Akanda',
                 'sort_order' => 3,
-                'cities' => ['Port-Gentil', 'Lambaréné', 'Gamba', 'Omboué', 'Mouila'],
+                'zones' => [
+                    ['name' => 'Centre', 'fee' => 1500, 'sort_order' => 1],
+                    ['name' => 'Périphérie', 'fee' => 2000, 'sort_order' => 2],
+                ],
             ],
             [
-                'name' => 'Nord',
-                'fee' => 3000,
+                'name' => 'Port-Gentil',
                 'sort_order' => 4,
-                'cities' => ['Oyem', 'Bitam', 'Mitzic', 'Makokou', 'Ovan'],
+                'zones' => [
+                    ['name' => 'Centre', 'fee' => 2500, 'sort_order' => 1],
+                    ['name' => 'Périphérie', 'fee' => 3000, 'sort_order' => 2],
+                ],
             ],
             [
-                'name' => 'Sud & Est',
-                'fee' => 3000,
+                'name' => 'Franceville',
                 'sort_order' => 5,
-                'cities' => ['Franceville', 'Moanda', 'Lékoni', 'Koulamoutou', 'Tchibanga', 'Mayumba'],
+                'zones' => [
+                    ['name' => 'Centre', 'fee' => 3000, 'sort_order' => 1],
+                    ['name' => 'Périphérie', 'fee' => 3500, 'sort_order' => 2],
+                ],
+            ],
+            [
+                'name' => 'Oyem',
+                'sort_order' => 6,
+                'zones' => [
+                    ['name' => 'Centre', 'fee' => 3000, 'sort_order' => 1],
+                    ['name' => 'Périphérie', 'fee' => 3500, 'sort_order' => 2],
+                ],
             ],
         ];
 
-        foreach ($zones as $zoneData) {
-            $cities = $zoneData['cities'];
-            unset($zoneData['cities']);
+        foreach ($cities as $cityData) {
+            $zones = $cityData['zones'];
+            unset($cityData['zones']);
 
-            $zone = ShippingZone::updateOrCreate(
-                ['name' => $zoneData['name']],
-                $zoneData
+            $city = ShippingCity::updateOrCreate(
+                ['name' => $cityData['name']],
+                $cityData
             );
 
-            foreach ($cities as $cityName) {
-                ShippingCity::updateOrCreate(
-                    ['name' => $cityName],
-                    ['shipping_zone_id' => $zone->id]
+            foreach ($zones as $zoneData) {
+                ShippingZone::updateOrCreate(
+                    ['shipping_city_id' => $city->id, 'name' => $zoneData['name']],
+                    $zoneData
                 );
             }
         }

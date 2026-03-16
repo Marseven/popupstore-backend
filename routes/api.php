@@ -83,7 +83,6 @@ Route::post('/payments/callback', [PaymentController::class, 'callback']);
 
 // Shipping (public)
 Route::get('/shipping/cities', [ShippingController::class, 'cities']);
-Route::post('/shipping/calculate', [ShippingController::class, 'calculateFee']);
 
 // Order tracking (public - guest access by phone + order number)
 Route::get('/orders/track', [OrderController::class, 'track']);

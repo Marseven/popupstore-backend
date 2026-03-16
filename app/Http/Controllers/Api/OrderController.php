@@ -10,7 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductStock;
 use App\Models\Setting;
-use App\Models\ShippingCity;
+use App\Models\ShippingZone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,8 +52,17 @@ class OrderController extends Controller
                 // Calculate totals
                 $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
 
-                // Dynamic shipping fee from zones
-                $shippingFee = ShippingCity::getShippingFee($validated['shipping_city']) ?? 0;
+                // Dynamic shipping fee from selected zone
+                $shippingFee = 0;
+                $shippingZoneName = null;
+
+                if (!empty($validated['shipping_zone_id'])) {
+                    $zone = ShippingZone::find($validated['shipping_zone_id']);
+                    if ($zone) {
+                        $shippingFee = (float) $zone->fee;
+                        $shippingZoneName = $zone->name;
+                    }
+                }
 
                 // Free shipping threshold
                 $freeThreshold = (float) Setting::get('free_shipping_threshold', 0);
@@ -79,6 +88,7 @@ class OrderController extends Controller
                     'shipping_address' => $validated['shipping_address'],
                     'shipping_city' => $validated['shipping_city'],
                     'shipping_quartier' => $validated['shipping_quartier'] ?? null,
+                    'shipping_zone' => $shippingZoneName,
                     'payment_method' => $validated['payment_method'] ?? null,
                     'payment_status' => 'pending',
                     'customer_notes' => $validated['customer_notes'] ?? null,

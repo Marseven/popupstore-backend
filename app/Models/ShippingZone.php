@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
 
 class ShippingZone extends Model
 {
     protected $fillable = [
+        'shipping_city_id',
         'name',
         'fee',
         'is_active',
@@ -23,9 +24,9 @@ class ShippingZone extends Model
         ];
     }
 
-    public function cities(): HasMany
+    public function city(): BelongsTo
     {
-        return $this->hasMany(ShippingCity::class);
+        return $this->belongsTo(ShippingCity::class, 'shipping_city_id');
     }
 
     public function scopeActive(Builder $query): Builder
