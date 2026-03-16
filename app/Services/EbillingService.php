@@ -4,35 +4,68 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\PaymentTransaction;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class EbillingService
 {
-    private string $apiUrl;
-    private string $apiKey;
-    private string $merchantId;
-    private string $callbackUrl;
-
-    public function __construct()
+    private function getConfig(string $settingKey, string $configKey): ?string
     {
-        $this->apiUrl = config('ebilling.api_url');
-        $this->apiKey = config('ebilling.api_key');
-        $this->merchantId = config('ebilling.merchant_id');
-        $this->callbackUrl = config('ebilling.callback_url');
-    }
+        $value = Setting::get($settingKey);
 
-    public function initiatePayment(Order $order, string $provider, string $phone): array
-    {
-        // Validate provider
-        if (!in_array($provider, config('ebilling.supported_providers'))) {
-            return ['success' => false, 'message' => 'Fournisseur de paiement non supporté'];
+        if ($value !== null && $value !== '') {
+            return $value;
         }
 
-        // Create transaction record
+        return config("ebilling.{$configKey}");
+    }
+
+    private function getMode(): string
+    {
+        $mode = $this->getConfig('ebilling_mode', 'mode');
+
+        return in_array($mode, ['lab', 'prod']) ? $mode : 'lab';
+    }
+
+    private function getApiBaseUrl(): string
+    {
+        return config("ebilling.urls.{$this->getMode()}.api");
+    }
+
+    private function getPortalBaseUrl(): string
+    {
+        return config("ebilling.urls.{$this->getMode()}.portal");
+    }
+
+    private function getAuthHeader(): string
+    {
+        $username = $this->getConfig('ebilling_username', 'username');
+        $sharedKey = $this->getConfig('ebilling_shared_key', 'shared_key');
+
+        return 'Basic ' . base64_encode("{$username}:{$sharedKey}");
+    }
+
+    private function mapProvider(string $provider): string
+    {
+        return config("ebilling.provider_map.{$provider}", $provider);
+    }
+
+    private function markOrderAsPaid(Order $order): void
+    {
+        $order->update([
+            'payment_status' => 'success',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+    }
+
+    public function createBill(Order $order, string $provider, string $phone): array
+    {
         $transaction = PaymentTransaction::create([
             'order_id' => $order->id,
             'provider' => $provider,
+            'payment_system' => $this->mapProvider($provider),
             'phone' => $phone,
             'amount' => $order->total,
             'currency' => config('ebilling.currency', 'XAF'),
@@ -41,58 +74,70 @@ class EbillingService
         ]);
 
         try {
+            $callbackUrl = $this->getConfig('ebilling_callback_url', 'callback_url');
+
             $response = Http::timeout(config('ebilling.timeout', 30))
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Authorization' => $this->getAuthHeader(),
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ])
-                ->post($this->apiUrl . '/payments/initiate', [
-                    'merchant_id' => $this->merchantId,
-                    'amount' => $order->total,
-                    'currency' => config('ebilling.currency', 'XAF'),
-                    'provider' => $provider,
-                    'phone' => $phone,
-                    'reference' => $order->order_number,
-                    'description' => 'Commande ' . $order->order_number,
-                    'callback_url' => $this->callbackUrl,
+                ->post($this->getApiBaseUrl() . '/api/v1/merchant/e_bills', [
+                    'payer_msisdn' => $phone,
+                    'payer_name' => $order->shipping_name ?? $order->user->name ?? 'Client',
+                    'payer_email' => $order->user->email ?? '',
+                    'amount' => (int) $order->total,
+                    'short_description' => 'Commande ' . $order->order_number,
+                    'external_reference' => $order->order_number,
+                    'expiry_period' => config('ebilling.expiry_period', 60),
                 ]);
 
             $data = $response->json();
 
-            if ($response->successful() && isset($data['transaction_id'])) {
+            Log::info('Ebilling createBill response', [
+                'order' => $order->order_number,
+                'status' => $response->status(),
+                'body' => $data,
+            ]);
+
+            $billId = $data['e_bill']['bill_id'] ?? null;
+
+            if ($response->successful() && $billId) {
                 $transaction->update([
-                    'transaction_id' => $data['transaction_id'],
+                    'transaction_id' => $billId,
                     'status' => 'pending',
                     'provider_response' => $data,
                 ]);
 
                 $order->update([
-                    'payment_reference' => $data['transaction_id'],
+                    'payment_reference' => $billId,
                     'payment_status' => 'processing',
                     'payment_provider' => $provider,
                     'payment_phone' => $phone,
                 ]);
 
+                $paymentUrl = $this->getPaymentPortalUrl($billId, $callbackUrl);
+
                 return [
                     'success' => true,
-                    'transaction_id' => $data['transaction_id'],
-                    'message' => 'Paiement initié. Veuillez confirmer sur votre téléphone.',
+                    'bill_id' => $billId,
+                    'payment_url' => $paymentUrl,
+                    'message' => 'Facture créée. Vous allez être redirigé vers le portail de paiement.',
                 ];
             }
 
             $transaction->update([
                 'status' => 'failed',
                 'provider_response' => $data,
-                'error_message' => $data['message'] ?? 'Erreur inconnue',
+                'error_message' => $data['message'] ?? $data['error'] ?? 'Erreur inconnue',
             ]);
 
             return [
                 'success' => false,
-                'message' => $data['message'] ?? 'Impossible d\'initier le paiement',
+                'message' => $data['message'] ?? $data['error'] ?? 'Impossible de créer la facture',
             ];
         } catch (\Exception $e) {
-            Log::error('Ebilling payment error', [
+            Log::error('Ebilling createBill error', [
                 'order' => $order->order_number,
                 'error' => $e->getMessage(),
             ]);
@@ -109,89 +154,88 @@ class EbillingService
         }
     }
 
-    public function checkStatus(string $transactionId): array
+    public function ussdPush(string $billId, string $phone, string $provider): array
     {
         try {
             $response = Http::timeout(config('ebilling.timeout', 30))
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Authorization' => $this->getAuthHeader(),
+                    'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ])
-                ->get($this->apiUrl . '/payments/status/' . $transactionId);
+                ->post($this->getApiBaseUrl() . "/api/v1/merchant/e_bills/{$billId}/ussd_push", [
+                    'payer_msisdn' => $phone,
+                    'payment_system_name' => $this->mapProvider($provider),
+                ]);
 
             $data = $response->json();
 
+            Log::info('Ebilling ussdPush response', [
+                'bill_id' => $billId,
+                'status' => $response->status(),
+                'body' => $data,
+            ]);
+
             if ($response->successful()) {
-                $transaction = PaymentTransaction::where('transaction_id', $transactionId)->first();
-
-                if ($transaction) {
-                    $newStatus = $this->mapProviderStatus($data['status'] ?? 'unknown');
-                    $transaction->update([
-                        'status' => $newStatus,
-                        'provider_response' => $data,
-                        'completed_at' => in_array($newStatus, ['success', 'failed', 'cancelled']) ? now() : null,
-                    ]);
-
-                    if ($newStatus === 'success') {
-                        $this->markOrderAsPaid($transaction->order);
-                    }
-                }
-
-                return ['success' => true, 'status' => $data['status'] ?? 'unknown', 'data' => $data];
+                return [
+                    'success' => true,
+                    'message' => 'Push USSD envoyé. Veuillez confirmer sur votre téléphone.',
+                ];
             }
 
-            return ['success' => false, 'message' => 'Impossible de vérifier le statut'];
+            return [
+                'success' => false,
+                'message' => $data['message'] ?? $data['error'] ?? 'Impossible d\'envoyer le push USSD',
+            ];
         } catch (\Exception $e) {
-            Log::error('Ebilling status check error', ['transaction_id' => $transactionId, 'error' => $e->getMessage()]);
-            return ['success' => false, 'message' => 'Erreur de connexion'];
+            Log::error('Ebilling ussdPush error', [
+                'bill_id' => $billId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Erreur de connexion au service de paiement',
+            ];
         }
+    }
+
+    public function getPaymentPortalUrl(string $billId, ?string $redirectUrl = null): string
+    {
+        $portalBase = $this->getPortalBaseUrl();
+        $redirect = $redirectUrl ?? $this->getConfig('ebilling_callback_url', 'callback_url');
+
+        return "{$portalBase}?invoice={$billId}&redirect_url=" . urlencode($redirect);
     }
 
     public function handleCallback(array $payload): void
     {
         Log::info('Ebilling callback received', $payload);
 
-        $transactionId = $payload['transaction_id'] ?? null;
-        if (!$transactionId) return;
+        $billId = $payload['billingid'] ?? $payload['bill_id'] ?? null;
+        $reference = $payload['reference'] ?? null;
+        $paymentSystem = $payload['paymentsystem'] ?? null;
+        $amount = $payload['amount'] ?? null;
 
-        $transaction = PaymentTransaction::where('transaction_id', $transactionId)->first();
-        if (!$transaction) {
-            Log::warning('Ebilling callback: transaction not found', ['transaction_id' => $transactionId]);
+        if (!$billId) {
+            Log::warning('Ebilling callback: no billingid in payload');
             return;
         }
 
-        $newStatus = $this->mapProviderStatus($payload['status'] ?? 'unknown');
+        $transaction = PaymentTransaction::where('transaction_id', $billId)->first();
+
+        if (!$transaction) {
+            Log::warning('Ebilling callback: transaction not found', ['bill_id' => $billId]);
+            return;
+        }
 
         $transaction->update([
-            'status' => $newStatus,
+            'status' => 'success',
+            'payment_system' => $paymentSystem,
             'provider_response' => $payload,
             'completed_at' => now(),
         ]);
 
-        if ($newStatus === 'success') {
-            $this->markOrderAsPaid($transaction->order);
-        } elseif ($newStatus === 'failed') {
-            $transaction->order->update(['payment_status' => 'failed']);
-        }
-    }
-
-    private function mapProviderStatus(string $status): string
-    {
-        return match (strtolower($status)) {
-            'success', 'completed', 'approved' => 'success',
-            'failed', 'rejected', 'error' => 'failed',
-            'cancelled', 'canceled' => 'cancelled',
-            'pending', 'waiting' => 'pending',
-            default => 'pending',
-        };
-    }
-
-    private function markOrderAsPaid(Order $order): void
-    {
-        $order->update([
-            'payment_status' => 'success',
-            'status' => 'paid',
-            'paid_at' => now(),
-        ]);
+        $this->markOrderAsPaid($transaction->order);
     }
 }

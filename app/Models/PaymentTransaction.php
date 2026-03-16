@@ -26,6 +26,7 @@ class PaymentTransaction extends Model
         'order_id',
         'transaction_id',
         'provider',
+        'payment_system',
         'phone',
         'amount',
         'currency',

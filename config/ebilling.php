@@ -4,79 +4,79 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | E-Billing API URL
+    | Mode (lab / prod)
     |--------------------------------------------------------------------------
-    |
-    | The base URL for the E-Billing payment gateway API.
-    |
     */
 
-    'api_url' => env('EBILLING_API_URL', 'https://api.ebilling.ga/v1'),
+    'mode' => env('EBILLING_MODE', 'lab'),
 
     /*
     |--------------------------------------------------------------------------
-    | API Key
+    | URLs per environment
     |--------------------------------------------------------------------------
-    |
-    | Your E-Billing API key for authentication.
-    |
     */
 
-    'api_key' => env('EBILLING_API_KEY'),
+    'urls' => [
+        'lab' => [
+            'api' => 'https://lab.billing-easy.net',
+            'portal' => 'https://test.billing-easy.net',
+        ],
+        'prod' => [
+            'api' => 'https://app.billing-easy.net',
+            'portal' => 'https://billing-easy.net',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
-    | Merchant ID
+    | Credentials (Basic Auth)
     |--------------------------------------------------------------------------
-    |
-    | Your E-Billing merchant identifier.
-    |
     */
 
-    'merchant_id' => env('EBILLING_MERCHANT_ID'),
+    'username' => env('EBILLING_USERNAME'),
+    'shared_key' => env('EBILLING_SHARED_KEY'),
 
     /*
     |--------------------------------------------------------------------------
     | Callback URL
     |--------------------------------------------------------------------------
-    |
-    | The URL E-Billing will call to notify payment status updates.
-    |
     */
 
     'callback_url' => env('EBILLING_CALLBACK_URL'),
 
     /*
     |--------------------------------------------------------------------------
-    | Supported Providers
+    | Bill expiry period (minutes)
     |--------------------------------------------------------------------------
-    |
-    | The mobile money providers supported for payments.
-    |
     */
 
-    'supported_providers' => ['airtel', 'moov'],
+    'expiry_period' => 60,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Provider mapping (internal → Ebilling system names)
+    |--------------------------------------------------------------------------
+    */
+
+    'provider_map' => [
+        'airtel' => 'airtelmoney',
+        'moov' => 'moovmoney4',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Request timeout (seconds)
+    |--------------------------------------------------------------------------
+    */
+
+    'timeout' => 30,
 
     /*
     |--------------------------------------------------------------------------
     | Currency
     |--------------------------------------------------------------------------
-    |
-    | The default currency for transactions.
-    |
     */
 
     'currency' => 'XAF',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Timeout
-    |--------------------------------------------------------------------------
-    |
-    | The request timeout in seconds for API calls.
-    |
-    */
-
-    'timeout' => 30,
 
 ];

@@ -83,7 +83,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Payments
     Route::post('/payments/initiate', [PaymentController::class, 'initiate']);
-    Route::get('/payments/status/{transactionId}', [PaymentController::class, 'status']);
+    Route::post('/payments/ussd-push', [PaymentController::class, 'ussdPush']);
 
     /*
     |--------------------------------------------------------------------------

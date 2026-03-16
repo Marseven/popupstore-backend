@@ -35,6 +35,12 @@ class SettingsSeeder extends Seeder
             ['key' => 'social_facebook', 'value' => '', 'type' => 'string', 'group_name' => 'social'],
             ['key' => 'social_tiktok', 'value' => '', 'type' => 'string', 'group_name' => 'social'],
 
+            // Payment
+            ['key' => 'ebilling_mode', 'value' => 'lab', 'type' => 'string', 'group_name' => 'payment'],
+            ['key' => 'ebilling_username', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
+            ['key' => 'ebilling_shared_key', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
+            ['key' => 'ebilling_callback_url', 'value' => '', 'type' => 'string', 'group_name' => 'payment'],
+
             // Advanced
             ['key' => 'maintenance_mode', 'value' => '0', 'type' => 'boolean', 'group_name' => 'advanced'],
         ];
