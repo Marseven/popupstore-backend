@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\OrderCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Models\CartItem;
@@ -105,6 +106,8 @@ class OrderController extends Controller
 
                 return $order;
             });
+
+            OrderCreated::dispatch($order);
 
             return response()->json([
                 'message' => 'Commande créée avec succès',

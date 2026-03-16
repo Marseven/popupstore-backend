@@ -8,6 +8,7 @@ use App\Models\ProductCategory;
 use App\Models\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -88,12 +89,14 @@ class ProductController extends Controller
      */
     public function featured(): JsonResponse
     {
-        $products = Product::active()
-            ->featured()
-            ->with(['images', 'category'])
-            ->orderBy('sort_order')
-            ->limit(8)
-            ->get();
+        $products = Cache::remember('products.featured', 300, function () {
+            return Product::active()
+                ->featured()
+                ->with(['images', 'category'])
+                ->orderBy('sort_order')
+                ->limit(8)
+                ->get();
+        });
 
         return response()->json([
             'products' => $products,

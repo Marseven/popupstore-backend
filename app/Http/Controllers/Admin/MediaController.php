@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreMediaRequest;
 use App\Http\Requests\Admin\UpdateMediaRequest;
+use App\Jobs\GenerateQrCode;
 use App\Models\MediaContent;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
@@ -90,8 +91,8 @@ class MediaController extends Controller
 
             $media = MediaContent::create($mediaData);
 
-            // Auto-generate QR code
-            $this->qrCodeService->generateForMedia($media);
+            // Dispatch QR code generation to queue
+            GenerateQrCode::dispatch($media);
 
             return response()->json([
                 'message' => 'Contenu média créé avec succès',

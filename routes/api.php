@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Api\HealthController;
+use Illuminate\Support\Facades\Cache;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,14 +44,16 @@ Route::get('/products/category/{slug}', [ProductController::class, 'byCategory']
 Route::get('/products/collection/{slug}', [ProductController::class, 'byCollection']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
 
-// Categories (public)
+// Categories (public, cached 5min)
 Route::get('/categories', function () {
-    return response()->json([
-        'categories' => \App\Models\ProductCategory::active()
+    $categories = Cache::remember('categories.active', 300, function () {
+        return \App\Models\ProductCategory::active()
             ->withCount('products')
             ->orderBy('sort_order')
-            ->get(),
-    ]);
+            ->get();
+    });
+
+    return response()->json(['categories' => $categories]);
 });
 
 // Collections (public)

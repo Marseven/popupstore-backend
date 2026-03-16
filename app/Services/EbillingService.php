@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\PaymentFailed;
+use App\Events\PaymentReceived;
+use App\Exceptions\PaymentException;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\Setting;
@@ -132,6 +135,8 @@ class EbillingService
                 'error_message' => $data['message'] ?? $data['error'] ?? 'Erreur inconnue',
             ]);
 
+            PaymentFailed::dispatch($order, $transaction, $data['message'] ?? 'Unknown error');
+
             return [
                 'success' => false,
                 'message' => $data['message'] ?? $data['error'] ?? 'Impossible de créer la facture',
@@ -147,10 +152,7 @@ class EbillingService
                 'error_message' => $e->getMessage(),
             ]);
 
-            return [
-                'success' => false,
-                'message' => 'Erreur de connexion au service de paiement',
-            ];
+            throw PaymentException::connectionFailed();
         }
     }
 
@@ -237,5 +239,7 @@ class EbillingService
         ]);
 
         $this->markOrderAsPaid($transaction->order);
+
+        PaymentReceived::dispatch($transaction->order, $transaction);
     }
 }

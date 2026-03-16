@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\BusinessException;
+use App\Exceptions\InsufficientStockException;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductStock;
@@ -22,7 +24,7 @@ class CartService
         $product = Product::findOrFail($productId);
 
         if (!$product->is_active) {
-            throw new \Exception('Ce produit n\'est plus disponible');
+            throw new BusinessException('Ce produit n\'est plus disponible', 'PRODUCT_UNAVAILABLE');
         }
 
         // Check stock
@@ -32,7 +34,7 @@ class CartService
                 ->first();
 
             if (!$stock || $stock->quantity < $quantity) {
-                throw new \Exception('Stock insuffisant pour cette taille');
+                throw new InsufficientStockException($product->name, $quantity, $stock?->quantity ?? 0);
             }
         }
 
@@ -73,7 +75,7 @@ class CartService
                 ->first();
 
             if (!$stock || $stock->quantity < $quantity) {
-                throw new \Exception('Stock insuffisant');
+                throw new InsufficientStockException('', $quantity, $stock?->quantity ?? 0);
             }
         }
 
