@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ShippingCity;
 use App\Models\ShippingZone;
 use Illuminate\Database\Seeder;
 
@@ -46,10 +47,16 @@ class ShippingZonesSeeder extends Seeder
             $cities = $zoneData['cities'];
             unset($zoneData['cities']);
 
-            $zone = ShippingZone::create($zoneData);
+            $zone = ShippingZone::updateOrCreate(
+                ['name' => $zoneData['name']],
+                $zoneData
+            );
 
             foreach ($cities as $cityName) {
-                $zone->cities()->create(['name' => $cityName]);
+                ShippingCity::updateOrCreate(
+                    ['name' => $cityName],
+                    ['shipping_zone_id' => $zone->id]
+                );
             }
         }
     }

@@ -55,13 +55,28 @@ class FakeDataSeeder extends Seeder
      */
     private function seedUsers(): array
     {
-        // Manager
-        $manager = User::factory()->manager()->create([
+        // Manager (find by email or phone to handle rebrand)
+        $managerData = [
+            'role_id' => \App\Models\Role::where('slug', 'manager')->value('id') ?? 3,
             'first_name' => 'Jean',
             'last_name' => 'Mouloungui',
             'email' => 'manager@popupstore.ga',
             'phone' => '+24177000001',
-        ]);
+            'password' => Hash::make('password'),
+            'is_active' => true,
+            'email_verified_at' => now(),
+            'phone_verified_at' => now(),
+            'deleted_at' => null,
+        ];
+        $manager = User::withTrashed()
+            ->where('email', 'manager@popupstore.ga')
+            ->orWhere('phone', '+24177000001')
+            ->first();
+        if ($manager) {
+            $manager->update($managerData);
+        } else {
+            $manager = User::create($managerData);
+        }
 
         // Named customers (Gabonese names)
         $namedCustomers = [
@@ -77,13 +92,38 @@ class FakeDataSeeder extends Seeder
             ['first_name' => 'Patrick', 'last_name' => 'Biyoghe', 'email' => 'patrick.b@gmail.com', 'phone' => '+24177000010'],
         ];
 
+        $customerRoleId = \App\Models\Role::where('slug', 'customer')->value('id') ?? 2;
         $customers = [];
         foreach ($namedCustomers as $data) {
-            $customers[] = User::factory()->create($data);
+            $existing = User::withTrashed()
+                ->where('email', $data['email'])
+                ->orWhere('phone', $data['phone'])
+                ->first();
+
+            $userData = array_merge($data, [
+                'role_id' => $customerRoleId,
+                'password' => Hash::make('password'),
+                'is_active' => true,
+                'email_verified_at' => now(),
+                'phone_verified_at' => now(),
+                'deleted_at' => null,
+            ]);
+
+            if ($existing) {
+                $existing->update($userData);
+                $customers[] = $existing;
+            } else {
+                $customers[] = User::create($userData);
+            }
         }
 
-        // Random extra customers
-        $randomCustomers = User::factory()->count(10)->create();
+        // Random extra customers — only create if we have fewer than 20 total customers
+        $existingCustomerCount = User::where('role_id', $customerRoleId)->count();
+        $randomCustomers = collect();
+        if ($existingCustomerCount < 20) {
+            $needed = 20 - $existingCustomerCount;
+            $randomCustomers = User::factory()->count(max(0, $needed))->create();
+        }
 
         return [
             'manager' => $manager,
@@ -204,7 +244,7 @@ class FakeDataSeeder extends Seeder
 
         $created = [];
         foreach ($collections as $col) {
-            $created[] = Collection::updateOrCreate(['slug' => $col['slug']], $col);
+            $created[] = Collection::withTrashed()->updateOrCreate(['slug' => $col['slug']], array_merge($col, ['deleted_at' => null]));
         }
 
         return $created;
@@ -248,7 +288,7 @@ class FakeDataSeeder extends Seeder
             $collection = $collections[$item['collection_index']];
             $slug = Str::slug($item['title']);
 
-            $media = MediaContent::updateOrCreate(
+            $media = MediaContent::withTrashed()->updateOrCreate(
                 ['slug' => $slug],
                 [
                     'collection_id' => $collection->id,
@@ -262,6 +302,7 @@ class FakeDataSeeder extends Seeder
                     'duration' => $item['duration'],
                     'play_count' => rand(0, 5000),
                     'is_active' => true,
+                    'deleted_at' => null,
                 ]
             );
 
@@ -366,7 +407,7 @@ class FakeDataSeeder extends Seeder
                 }
             }
 
-            $product = Product::updateOrCreate(
+            $product = Product::withTrashed()->updateOrCreate(
                 ['slug' => $slug],
                 [
                     'category_id' => $category->id,
@@ -382,6 +423,7 @@ class FakeDataSeeder extends Seeder
                     'is_active' => true,
                     'is_featured' => $p['featured'],
                     'sort_order' => $sortOrder++,
+                    'deleted_at' => null,
                 ]
             );
 
@@ -441,6 +483,12 @@ class FakeDataSeeder extends Seeder
      */
     private function seedOrders(array $users, array $products): void
     {
+        // Skip if orders already exist (idempotent)
+        if (Order::count() >= 35) {
+            $this->command->info('  Orders already seeded, skipping.');
+            return;
+        }
+
         $customers = $users['customers'];
         $statuses = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'];
         $paymentStatuses = ['pending', 'success', 'success', 'success', 'success', 'failed'];
