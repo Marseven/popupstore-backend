@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\PermissionController as AdminPermissionController
 use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
+use App\Http\Controllers\Admin\PaymentTransactionController as AdminTransactionController;
 use App\Http\Controllers\Api\HealthController;
 use Illuminate\Support\Facades\Cache;
 
@@ -144,6 +145,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/shipping-zones/{id}', [AdminShippingZoneController::class, 'show']);
         Route::put('/shipping-zones/{id}', [AdminShippingZoneController::class, 'update']);
         Route::delete('/shipping-zones/{id}', [AdminShippingZoneController::class, 'destroy']);
+
+        // Transactions (payments)
+        Route::get('/transactions', [AdminTransactionController::class, 'index']);
 
         // Orders management
         Route::get('/orders', [AdminOrderController::class, 'index']);
