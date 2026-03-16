@@ -72,13 +72,25 @@ class EbillingService
         ]);
 
         try {
+            $apiUrl = $this->getApiBaseUrl() . '/api/v1/merchant/e_bills';
+            $username = $this->getConfig('ebilling_username', 'username');
+            $sharedKey = $this->getConfig('ebilling_shared_key', 'shared_key');
+
+            Log::info('Ebilling createBill request', [
+                'order' => $order->order_number,
+                'mode' => $this->getMode(),
+                'api_url' => $apiUrl,
+                'username' => $username ? (substr($username, 0, 3) . '***') : '(empty)',
+                'shared_key_set' => !empty($sharedKey),
+            ]);
+
             $response = Http::timeout(config('ebilling.timeout', 30))
                 ->withHeaders([
                     'Authorization' => $this->getAuthHeader(),
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ])
-                ->post($this->getApiBaseUrl() . '/api/v1/merchant/e_bills', [
+                ->post($apiUrl, [
                     'payer_msisdn' => $phone,
                     'payer_name' => $order->shipping_name ?? $order->user?->name ?? 'Client',
                     'payer_email' => $order->guest_email ?? $order->user?->email ?? '',
