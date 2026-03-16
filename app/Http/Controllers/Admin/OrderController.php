@@ -60,7 +60,7 @@ class OrderController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $order = Order::with(['items', 'user', 'transactions'])
+        $order = Order::with(['items.product.images', 'user', 'transactions'])
             ->findOrFail($id);
 
         return response()->json([

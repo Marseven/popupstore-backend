@@ -167,7 +167,7 @@ class OrderController extends Controller
         $sessionId = $request->header('X-Session-Id');
 
         $query = Order::where('order_number', $orderNumber)
-            ->with(['items', 'transactions']);
+            ->with(['items.product.images', 'transactions']);
 
         if ($user) {
             $query->where('user_id', $user->id);
