@@ -16,7 +16,7 @@ class StoreOrderRequest extends FormRequest
         $rules = [
             'shipping_name' => 'required|string|max:255',
             'shipping_phone' => 'required|string|max:20',
-            'shipping_address' => 'required|string|max:500',
+            'shipping_address' => 'nullable|string|max:500',
             'shipping_city' => 'required|string|max:100',
             'shipping_quartier' => 'nullable|string|max:100',
             'customer_notes' => 'nullable|string|max:1000',
