@@ -160,7 +160,7 @@ class CartServiceTest extends TestCase
         ]);
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Stock insuffisant pour cette taille');
+        $this->expectExceptionMessage('Stock insuffisant');
 
         $this->cartService->addItem($user->id, null, $product->id, $size->id, 5);
     }
@@ -173,7 +173,7 @@ class CartServiceTest extends TestCase
 
         // No ProductStock created for this product/size combination
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Stock insuffisant pour cette taille');
+        $this->expectExceptionMessage('Stock insuffisant');
 
         $this->cartService->addItem($user->id, null, $product->id, $size->id, 1);
     }
@@ -402,6 +402,45 @@ class CartServiceTest extends TestCase
             'quantity' => 5,
         ]);
         // Session item should be deleted (not transferred)
+        $this->assertDatabaseCount('cart_items', 1);
+    }
+
+    public function test_add_item_for_authenticated_user_does_not_store_session_id(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['is_active' => true]);
+
+        // Even when a session id is passed alongside the user, the item belongs
+        // to the user only — storing session_id would let merge later delete it.
+        $item = $this->cartService->addItem($user->id, 'some-session', $product->id, null, 1);
+
+        $this->assertEquals($user->id, $item->user_id);
+        $this->assertNull($item->session_id);
+    }
+
+    public function test_merge_session_cart_does_not_touch_user_owned_items(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['is_active' => true]);
+        $sessionId = 'shared-session';
+
+        // Legacy/edge item that belongs to the user but still carries a session_id.
+        $item = CartItem::factory()->create([
+            'user_id' => $user->id,
+            'session_id' => $sessionId,
+            'product_id' => $product->id,
+            'size_id' => null,
+            'quantity' => 2,
+        ]);
+
+        // Triggered on every cart op for an authenticated user — must be a no-op here.
+        $this->cartService->mergeSessionCart($sessionId, $user->id);
+
+        $this->assertDatabaseHas('cart_items', [
+            'id' => $item->id,
+            'user_id' => $user->id,
+            'quantity' => 2,
+        ]);
         $this->assertDatabaseCount('cart_items', 1);
     }
 

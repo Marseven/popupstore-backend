@@ -15,7 +15,7 @@ class CartService
     {
         return CartItem::with(['product.images', 'product.mediaContent', 'size'])
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when(!$userId && $sessionId, fn($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
             ->get();
     }
 
@@ -52,7 +52,7 @@ class CartService
 
         return CartItem::create([
             'user_id' => $userId,
-            'session_id' => $sessionId,
+            'session_id' => $userId ? null : $sessionId,
             'product_id' => $productId,
             'size_id' => $sizeId,
             'quantity' => $quantity,
@@ -92,13 +92,15 @@ class CartService
     public function clear(?int $userId, ?string $sessionId): void
     {
         CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when(!$userId && $sessionId, fn($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
             ->delete();
     }
 
     public function mergeSessionCart(string $sessionId, int $userId): void
     {
-        $sessionItems = CartItem::where('session_id', $sessionId)->get();
+        $sessionItems = CartItem::where('session_id', $sessionId)
+            ->whereNull('user_id')
+            ->get();
 
         foreach ($sessionItems as $sessionItem) {
             $existingItem = CartItem::where('user_id', $userId)
@@ -138,7 +140,7 @@ class CartService
     {
         return CartItem::where('id', $cartItemId)
             ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->when(!$userId && $sessionId, fn($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
             ->firstOrFail();
     }
 }
