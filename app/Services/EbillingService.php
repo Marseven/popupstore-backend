@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\PaymentFailed;
 use App\Events\PaymentReceived;
 use App\Exceptions\PaymentException;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\Setting;
@@ -56,6 +57,13 @@ class EbillingService
             'status' => 'paid',
             'paid_at' => now(),
         ]);
+
+        // Payment confirmed — now it is safe to empty the buyer's cart.
+        if ($order->user_id) {
+            CartItem::where('user_id', $order->user_id)->delete();
+        } elseif ($order->session_id) {
+            CartItem::whereNull('user_id')->where('session_id', $order->session_id)->delete();
+        }
     }
 
     public function createBill(Order $order, string $phone): array

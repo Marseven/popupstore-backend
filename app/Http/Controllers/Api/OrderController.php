@@ -119,11 +119,16 @@ class OrderController extends Controller
                     }
                 }
 
-                // Clear cart
-                if ($user) {
-                    CartItem::where('user_id', $user->id)->delete();
-                } else {
-                    CartItem::whereNull('user_id')->where('session_id', $sessionId)->delete();
+                // Cash-on-delivery has no online payment step, so the order is the
+                // confirmation — clear the cart now. For online payments the cart is
+                // emptied only on payment success (EbillingService::markOrderAsPaid),
+                // so a failed/abandoned payment doesn't lose the buyer's cart.
+                if (($validated['payment_method'] ?? null) === 'cod') {
+                    if ($user) {
+                        CartItem::where('user_id', $user->id)->delete();
+                    } else {
+                        CartItem::whereNull('user_id')->where('session_id', $sessionId)->delete();
+                    }
                 }
 
                 return $order;

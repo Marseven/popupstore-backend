@@ -54,6 +54,7 @@ class OrderTest extends TestCase
                 'shipping_phone' => '+24177000001',
                 'shipping_address' => '123 Main St',
                 'shipping_city' => 'Libreville',
+                'payment_method' => 'ebilling',
             ]);
 
         $response->assertStatus(201)
@@ -61,7 +62,39 @@ class OrderTest extends TestCase
             ->assertJsonPath('order.status', 'pending');
 
         $this->assertDatabaseCount('orders', 1);
-        // Cart should be cleared after order creation
+        // Online payment: cart is preserved until payment succeeds (cleared on callback)
+        $this->assertDatabaseCount('cart_items', 1);
+    }
+
+    public function test_cod_order_clears_cart_on_confirmation(): void
+    {
+        $product = Product::factory()->create(['is_active' => true, 'price' => 10000]);
+        $size = Size::factory()->create(['name' => 'M']);
+
+        ProductStock::factory()->create([
+            'product_id' => $product->id,
+            'size_id' => $size->id,
+            'quantity' => 10,
+        ]);
+
+        CartItem::factory()->create([
+            'user_id' => $this->user->id,
+            'session_id' => null,
+            'product_id' => $product->id,
+            'size_id' => $size->id,
+            'quantity' => 2,
+        ]);
+
+        $this->actingAs($this->user)
+            ->postJson('/api/orders', [
+                'shipping_name' => 'John Doe',
+                'shipping_phone' => '+24177000001',
+                'shipping_address' => '123 Main St',
+                'shipping_city' => 'Libreville',
+                'payment_method' => 'cod',
+            ])->assertStatus(201);
+
+        // Cash-on-delivery has no online step, so the cart is emptied immediately
         $this->assertDatabaseCount('cart_items', 0);
     }
 
