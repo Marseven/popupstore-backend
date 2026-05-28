@@ -9,9 +9,12 @@ class NotificationService
 {
     public function notifyAdmins(Notification $notification): void
     {
-        $admins = User::whereHas('role', function ($q) {
-            $q->whereIn('slug', ['super_admin', 'manager']);
-        })->where('is_active', true)->get();
+        $admins = User::with('pushSubscriptions')
+            ->whereHas('role', function ($q) {
+                $q->whereIn('slug', ['super_admin', 'manager']);
+            })
+            ->where('is_active', true)
+            ->get();
 
         foreach ($admins as $admin) {
             $admin->notify($notification);
