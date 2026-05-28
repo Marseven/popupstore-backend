@@ -28,7 +28,7 @@ return [
         ],
         'prod' => [
             'api' => 'https://stg.billing-easy.com',
-            'portal' => 'https://stg.billing-easy.com',
+            'portal' => 'https://staging.billing-easy.net',
         ],
     ],
 
