@@ -16,14 +16,19 @@ return [
     |--------------------------------------------------------------------------
     */
 
+    // Explicit overrides — take precedence over the mode-based defaults below.
+    // Set these in .env when the gateway URLs differ from the defaults.
+    'api_url' => env('EBILLING_API_URL'),
+    'portal_url' => env('EBILLING_PORTAL_URL'),
+
     'urls' => [
         'lab' => [
             'api' => 'https://lab.billing-easy.net',
             'portal' => 'https://test.billing-easy.net',
         ],
         'prod' => [
-            'api' => 'https://app.billing-easy.net',
-            'portal' => 'https://billing-easy.net',
+            'api' => 'https://stg.billing-easy.com',
+            'portal' => 'https://stg.billing-easy.com',
         ],
     ],
 

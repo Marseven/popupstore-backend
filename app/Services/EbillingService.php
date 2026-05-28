@@ -34,12 +34,14 @@ class EbillingService
 
     private function getApiBaseUrl(): string
     {
-        return config("ebilling.urls.{$this->getMode()}.api");
+        return $this->getConfig('ebilling_api_url', 'api_url')
+            ?: config("ebilling.urls.{$this->getMode()}.api");
     }
 
     private function getPortalBaseUrl(): string
     {
-        return config("ebilling.urls.{$this->getMode()}.portal");
+        return $this->getConfig('ebilling_portal_url', 'portal_url')
+            ?: config("ebilling.urls.{$this->getMode()}.portal");
     }
 
     private function getAuthHeader(): string
