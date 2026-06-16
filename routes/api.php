@@ -85,8 +85,9 @@ Route::middleware('auth.optional')->group(function () {
     Route::delete('/cart', [CartController::class, 'clear']);
 });
 
-// Payment callback (webhook - no auth)
-Route::post('/payments/callback', [PaymentController::class, 'callback']);
+// Payment callback (webhook - no Sanctum auth, but shared-secret verified)
+Route::post('/payments/callback', [PaymentController::class, 'callback'])
+    ->middleware('ebilling.webhook');
 
 // Shipping (public)
 Route::get('/shipping/cities', [ShippingController::class, 'cities']);
@@ -105,8 +106,9 @@ Route::middleware('auth.optional')->group(function () {
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->where('orderNumber', 'POP-.*');
 
-    // Payments
-    Route::post('/payments/initiate', [PaymentController::class, 'initiate']);
+    // Payments — dedicated throttle + Idempotency-Key replay (anti double-charge)
+    Route::post('/payments/initiate', [PaymentController::class, 'initiate'])
+        ->middleware(['throttle:payments', 'idempotency']);
 });
 
 /*

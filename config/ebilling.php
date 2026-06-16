@@ -51,6 +51,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Callback shared secret
+    |--------------------------------------------------------------------------
+    | When set, the payment callback must present this token (X-Callback-Token
+    | header or callback_token field) or it is rejected (403). Unset = allow
+    | (back-compat) but log a warning.
+    */
+
+    'callback_secret' => env('EBILLING_CALLBACK_SECRET'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Redirect URL (frontend — where the client returns after payment)
     |--------------------------------------------------------------------------
     */
