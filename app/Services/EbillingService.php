@@ -49,7 +49,7 @@ class EbillingService
         $username = $this->getConfig('ebilling_username', 'username');
         $sharedKey = $this->getConfig('ebilling_shared_key', 'shared_key');
 
-        return 'Basic ' . base64_encode("{$username}:{$sharedKey}");
+        return 'Basic '.base64_encode("{$username}:{$sharedKey}");
     }
 
     private function markOrderAsPaid(Order $order): void
@@ -82,7 +82,7 @@ class EbillingService
         ]);
 
         try {
-            $apiUrl = $this->getApiBaseUrl() . '/api/v1/merchant/e_bills';
+            $apiUrl = $this->getApiBaseUrl().'/api/v1/merchant/e_bills';
             $username = $this->getConfig('ebilling_username', 'username');
             $sharedKey = $this->getConfig('ebilling_shared_key', 'shared_key');
 
@@ -90,8 +90,8 @@ class EbillingService
                 'order' => $order->order_number,
                 'mode' => $this->getMode(),
                 'api_url' => $apiUrl,
-                'username' => $username ? (substr($username, 0, 3) . '***') : '(empty)',
-                'shared_key_set' => !empty($sharedKey),
+                'username' => $username ? (substr($username, 0, 3).'***') : '(empty)',
+                'shared_key_set' => ! empty($sharedKey),
             ]);
 
             $response = Http::timeout(config('ebilling.timeout', 30))
@@ -105,7 +105,7 @@ class EbillingService
                     'payer_name' => $order->shipping_name ?? $order->user?->name ?? 'Client',
                     'payer_email' => $order->guest_email ?? $order->user?->email ?? '',
                     'amount' => (int) $order->total,
-                    'short_description' => 'Commande ' . $order->order_number,
+                    'short_description' => 'Commande '.$order->order_number,
                     'external_reference' => $order->order_number,
                     'expiry_period' => config('ebilling.expiry_period', 60),
                 ]);
@@ -174,9 +174,9 @@ class EbillingService
     {
         $portalBase = $this->getPortalBaseUrl();
         $redirectUrl = $this->getConfig('ebilling_redirect_url', 'redirect_url');
-        $redirect = rtrim($redirectUrl, '/') . "/orders/{$orderNumber}?payment=return";
+        $redirect = rtrim($redirectUrl, '/')."/orders/{$orderNumber}?payment=return";
 
-        return "{$portalBase}?invoice={$billId}&redirect_url=" . urlencode($redirect);
+        return "{$portalBase}?invoice={$billId}&redirect_url=".urlencode($redirect);
     }
 
     public function handleCallback(array $payload): void
@@ -188,15 +188,30 @@ class EbillingService
         $paymentSystem = $payload['paymentsystem'] ?? null;
         $amount = $payload['amount'] ?? null;
 
-        if (!$billId) {
+        if (! $billId) {
             Log::warning('Ebilling callback: no billingid in payload');
+
             return;
         }
 
         $transaction = PaymentTransaction::where('transaction_id', $billId)->first();
 
-        if (!$transaction) {
+        if (! $transaction) {
             Log::warning('Ebilling callback: transaction not found', ['bill_id' => $billId]);
+
+            return;
+        }
+
+        // Idempotency — the webhook has no auth and may be delivered more than once
+        // (gateway retries, replays). Once a transaction is settled, re-processing
+        // would re-clear the cart and re-dispatch PaymentReceived (double admin
+        // notice, and later double revenue split). Acknowledge and stop.
+        if ($transaction->status === 'success') {
+            Log::info('Ebilling callback: transaction already settled, skipping', [
+                'bill_id' => $billId,
+                'order_id' => $transaction->order_id,
+            ]);
+
             return;
         }
 
