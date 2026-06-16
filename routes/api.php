@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
+use App\Http\Controllers\Admin\MerchantController as AdminMerchantController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentTransactionController as AdminTransactionController;
@@ -23,6 +24,10 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ShippingController;
+use App\Http\Controllers\Merchant\MerchantController;
+use App\Http\Controllers\Merchant\OrderController as MerchantOrderController;
+use App\Http\Controllers\Merchant\PayoutController as MerchantPayoutController;
+use App\Http\Controllers\Merchant\ProductController as MerchantProductController;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
@@ -129,6 +134,26 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Merchant Routes (self-service)
+    |--------------------------------------------------------------------------
+    */
+
+    // Any authenticated user may apply to become a merchant.
+    Route::post('/merchant/apply', [MerchantController::class, 'apply']);
+
+    // Owner-scoped merchant area — requires the merchant role AND an approved profile.
+    Route::prefix('merchant')->middleware(['role:merchant', 'merchant.approved'])->group(function () {
+        Route::get('/dashboard', [MerchantController::class, 'dashboard']);
+        Route::get('/products', [MerchantProductController::class, 'index']);
+        Route::post('/products', [MerchantProductController::class, 'store']);
+        Route::put('/products/{id}', [MerchantProductController::class, 'update']);
+        Route::delete('/products/{id}', [MerchantProductController::class, 'destroy']);
+        Route::get('/orders', [MerchantOrderController::class, 'index']);
+        Route::get('/payouts', [MerchantPayoutController::class, 'index']);
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | Admin Routes
     |--------------------------------------------------------------------------
     */
@@ -215,6 +240,11 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'update']);
             Route::delete('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'destroy']);
             Route::post('/payouts/{id}/mark-paid', [AdminPayoutController::class, 'markPaid']);
+
+            // Merchant enrolment management
+            Route::get('/merchants', [AdminMerchantController::class, 'index']);
+            Route::post('/merchants/{id}/approve', [AdminMerchantController::class, 'approve']);
+            Route::post('/merchants/{id}/suspend', [AdminMerchantController::class, 'suspend']);
         });
     });
 });

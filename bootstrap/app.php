@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.optional' => \App\Http\Middleware\OptionalAuth::class,
             'idempotency' => \App\Http\Middleware\IdempotencyKey::class,
             'ebilling.webhook' => \App\Http\Middleware\VerifyEbillingWebhook::class,
+            'merchant.approved' => \App\Http\Middleware\EnsureMerchantApproved::class,
         ]);
         $middleware->statefulApi();
 
