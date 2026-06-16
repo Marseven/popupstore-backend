@@ -21,6 +21,7 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'collection_id',
+        'campaign_team_id',
         'media_content_id',
         'sku',
         'name',
@@ -67,6 +68,14 @@ class Product extends Model
     }
 
     /**
+     * The campaign team this product is attributed to (campaign products).
+     */
+    public function campaignTeam(): BelongsTo
+    {
+        return $this->belongsTo(CampaignTeam::class, 'campaign_team_id');
+    }
+
+    /**
      * The media content that the product belongs to.
      */
     public function mediaContent(): BelongsTo
@@ -108,8 +117,6 @@ class Product extends Model
 
     /**
      * Get the primary image for the product.
-     *
-     * @return \App\Models\ProductImage|null
      */
     public function getPrimaryImageAttribute(): ?ProductImage
     {

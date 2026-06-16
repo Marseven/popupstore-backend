@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\MerchantController as AdminMerchantController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\SettingController as AdminSettingController;
 use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\HealthController;
@@ -100,6 +102,11 @@ Route::get('/shipping/cities', [ShippingController::class, 'cities']);
 // Order tracking (public - guest access by phone + order number)
 Route::get('/orders/track', [OrderController::class, 'track']);
 
+// Campaigns (public)
+Route::get('/campaigns/{slug}', [CampaignController::class, 'show']);
+Route::get('/campaigns/{slug}/leaderboard', [CampaignController::class, 'leaderboard']);
+Route::get('/campaigns/{slug}/teams', [CampaignController::class, 'teams']);
+
 /*
 |--------------------------------------------------------------------------
 | Optional Auth Routes (authenticated or guest)
@@ -109,11 +116,15 @@ Route::get('/orders/track', [OrderController::class, 'track']);
 Route::middleware('auth.optional')->group(function () {
     // Orders (create & view single)
     Route::post('/orders', [OrderController::class, 'store']);
-    Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->where('orderNumber', 'POP-.*');
+    Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])->where('orderNumber', 'POP-[^/]+');
 
     // Payments — dedicated throttle + Idempotency-Key replay (anti double-charge)
     Route::post('/payments/initiate', [PaymentController::class, 'initiate'])
         ->middleware(['throttle:payments', 'idempotency']);
+
+    // Campaign entitlements for a buyer's order (guest or authenticated)
+    Route::get('/orders/{orderNumber}/entitlements', [CampaignController::class, 'entitlements'])
+        ->where('orderNumber', 'POP-[^/]+');
 });
 
 /*
@@ -192,6 +203,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Payouts (revenue split) — managers may consult the list
         Route::get('/payouts', [AdminPayoutController::class, 'index']);
+
+        // Campaigns management
+        Route::get('/campaigns', [AdminCampaignController::class, 'index']);
+        Route::post('/campaigns', [AdminCampaignController::class, 'store']);
+        Route::get('/campaigns/{id}', [AdminCampaignController::class, 'show']);
+        Route::put('/campaigns/{id}', [AdminCampaignController::class, 'update']);
+        Route::post('/campaigns/{id}/close', [AdminCampaignController::class, 'close']);
+        Route::post('/campaigns/{id}/teams', [AdminCampaignController::class, 'storeTeam']);
 
         // Orders management
         Route::get('/orders', [AdminOrderController::class, 'index']);

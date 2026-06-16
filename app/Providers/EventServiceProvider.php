@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Events\OrderCreated;
 use App\Events\PaymentFailed;
 use App\Events\PaymentReceived;
+use App\Listeners\AwardCampaignPoints;
 use App\Listeners\LogOrderCreated;
 use App\Listeners\LogPaymentFailed;
 use App\Listeners\LogPaymentReceived;
@@ -29,6 +30,7 @@ class EventServiceProvider extends ServiceProvider
             SendPaymentReceivedNotification::class,
             SendGuestPaymentConfirmation::class,
             RecordRevenueShares::class,
+            AwardCampaignPoints::class,
         ],
         PaymentFailed::class => [
             LogPaymentFailed::class,
