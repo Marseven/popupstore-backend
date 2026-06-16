@@ -110,4 +110,28 @@ class MerchantService
 
         return $profile->fresh();
     }
+
+    /**
+     * Admin-initiated onboarding: attach a merchant profile to an existing user
+     * (by email) and approve it immediately. Reuses an existing profile rather
+     * than duplicating, so the action is safe to repeat.
+     */
+    public function adminOnboard(string $email, array $data): MerchantProfile
+    {
+        $user = User::where('email', $email)->first();
+
+        if (! $user) {
+            throw new BusinessException("Aucun utilisateur avec l'email {$email}.", 'MERCHANT_USER_NOT_FOUND', 404);
+        }
+
+        $profile = $user->merchantProfile()->firstOrCreate([], [
+            'business_name' => $data['business_name'],
+            'rccm_nif' => $data['rccm_nif'] ?? null,
+            'payout_phone' => $data['payout_phone'],
+            'payout_provider' => $data['payout_provider'],
+            'status' => MerchantStatus::Pending,
+        ]);
+
+        return $this->approve($profile);
+    }
 }

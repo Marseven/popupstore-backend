@@ -22,6 +22,21 @@ class MerchantController extends Controller
         return response()->json($profiles);
     }
 
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'business_name' => 'required|string|max:255',
+            'rccm_nif' => 'nullable|string|max:100',
+            'payout_phone' => 'required|string|max:20',
+            'payout_provider' => 'required|string|in:airtelmoney,moovmoney4',
+        ]);
+
+        $profile = $this->merchants->adminOnboard($validated['email'], $validated);
+
+        return response()->json(['merchant_profile' => $profile->load('user:id,first_name,last_name,email')], 201);
+    }
+
     public function approve(int $id): JsonResponse
     {
         $profile = MerchantProfile::findOrFail($id);

@@ -260,8 +260,19 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'destroy']);
             Route::post('/payouts/{id}/mark-paid', [AdminPayoutController::class, 'markPaid']);
 
+            // Collections picker (revenue-share configuration, etc.)
+            Route::get('/collections', function () {
+                return response()->json([
+                    'collections' => \App\Models\Collection::query()
+                        ->select('id', 'name', 'type', 'owner_user_id')
+                        ->orderBy('name')
+                        ->get(),
+                ]);
+            });
+
             // Merchant enrolment management
             Route::get('/merchants', [AdminMerchantController::class, 'index']);
+            Route::post('/merchants', [AdminMerchantController::class, 'store']);
             Route::post('/merchants/{id}/approve', [AdminMerchantController::class, 'approve']);
             Route::post('/merchants/{id}/suspend', [AdminMerchantController::class, 'suspend']);
         });
