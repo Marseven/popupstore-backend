@@ -24,7 +24,7 @@ class PaymentReceivedNotification extends Notification
     {
         return (new WebPushMessage)
             ->title('Paiement reçu')
-            ->body("{$this->order->order_number} — " . number_format($this->transaction->amount, 0, ',', ' ') . " XAF via {$this->transaction->provider}")
+            ->body("{$this->order->order_number} — ".number_format($this->transaction->amount, 0, ',', ' ')." XAF via {$this->transaction->provider}")
             ->icon('/logo_color_1.PNG')
             ->data(['url' => "/admin/orders/{$this->order->id}"]);
     }
@@ -32,7 +32,7 @@ class PaymentReceivedNotification extends Notification
     public function toArray($notifiable): array
     {
         return [
-            'message' => "Paiement reçu pour {$this->order->order_number} — " . number_format($this->transaction->amount, 0, ',', ' ') . " XAF via {$this->transaction->provider}",
+            'message' => "Paiement reçu pour {$this->order->order_number} — ".number_format($this->transaction->amount, 0, ',', ' ')." XAF via {$this->transaction->provider}",
             'icon' => 'payment',
             'type' => 'success',
             'action_url' => "/admin/orders/{$this->order->id}",

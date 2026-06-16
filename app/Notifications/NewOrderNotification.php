@@ -20,7 +20,7 @@ class NewOrderNotification extends Notification
     {
         return (new WebPushMessage)
             ->title('Nouvelle commande')
-            ->body("Commande {$this->order->order_number} — " . number_format($this->order->total, 0, ',', ' ') . ' XAF')
+            ->body("Commande {$this->order->order_number} — ".number_format($this->order->total, 0, ',', ' ').' XAF')
             ->icon('/logo_color_1.PNG')
             ->data(['url' => "/admin/orders/{$this->order->id}"]);
     }
@@ -28,7 +28,7 @@ class NewOrderNotification extends Notification
     public function toArray($notifiable): array
     {
         return [
-            'message' => "Nouvelle commande {$this->order->order_number} de {$this->order->customer_name} — " . number_format($this->order->total, 0, ',', ' ') . ' XAF',
+            'message' => "Nouvelle commande {$this->order->order_number} de {$this->order->customer_name} — ".number_format($this->order->total, 0, ',', ' ').' XAF',
             'icon' => 'order',
             'type' => 'info',
             'action_url' => "/admin/orders/{$this->order->id}",

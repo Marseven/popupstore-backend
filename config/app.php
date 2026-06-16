@@ -15,6 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Public SPA base URL — used to build guest-facing links (order tracking, etc.).
+    'frontend_url' => env('FRONTEND_URL', 'https://popupstore.ga'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
