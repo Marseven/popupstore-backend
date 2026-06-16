@@ -15,7 +15,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
             $table->string('transaction_id', 100)->nullable()->unique();
-            $table->enum('provider', ['airtel', 'moov']);
+            // varchar(50) nullable to hold Ebilling system names (airtelmoney/moovmoney4)
+            // and a null value at initiation. Prod already runs migration #24 to MODIFY
+            // this to varchar; defining it here keeps the sqlite test schema consistent.
+            $table->string('provider', 50)->nullable();
             $table->string('phone', 20);
             $table->decimal('amount', 10, 2);
             $table->string('currency', 3)->default('XAF');
