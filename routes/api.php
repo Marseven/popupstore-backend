@@ -1,28 +1,30 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MediaController as AdminMediaController;
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\PaymentTransactionController as AdminTransactionController;
+use App\Http\Controllers\Admin\PayoutController as AdminPayoutController;
+use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\PushSubscriptionController as AdminPushController;
+use App\Http\Controllers\Admin\RevenueShareController as AdminRevenueShareController;
+use App\Http\Controllers\Admin\RoleController as AdminRoleController;
+use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\MediaContentController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
-use App\Http\Controllers\Api\MediaContentController;
-use App\Http\Controllers\Api\CollectionController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Admin\OrderController as AdminOrderController;
-use App\Http\Controllers\Admin\MediaController as AdminMediaController;
-use App\Http\Controllers\Admin\UserController as AdminUserController;
-use App\Http\Controllers\Admin\RoleController as AdminRoleController;
-use App\Http\Controllers\Admin\PermissionController as AdminPermissionController;
-use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
-use App\Http\Controllers\Admin\PushSubscriptionController as AdminPushController;
-use App\Http\Controllers\Admin\SettingController as AdminSettingController;
+use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ShippingController;
-use App\Http\Controllers\Admin\ShippingZoneController as AdminShippingZoneController;
-use App\Http\Controllers\Admin\PaymentTransactionController as AdminTransactionController;
-use App\Http\Controllers\Api\HealthController;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -161,6 +163,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Transactions (payments)
         Route::get('/transactions', [AdminTransactionController::class, 'index']);
 
+        // Payouts (revenue split) — managers may consult the list
+        Route::get('/payouts', [AdminPayoutController::class, 'index']);
+
         // Orders management
         Route::get('/orders', [AdminOrderController::class, 'index']);
         Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
@@ -199,6 +204,15 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/settings', [AdminSettingController::class, 'index']);
             Route::put('/settings', [AdminSettingController::class, 'update']);
             Route::post('/settings/logo', [AdminSettingController::class, 'uploadLogo']);
+        });
+
+        // Revenue shares & payout settlement (super_admin only)
+        Route::middleware('role:super_admin')->group(function () {
+            Route::get('/collections/{collection}/revenue-shares', [AdminRevenueShareController::class, 'index']);
+            Route::post('/collections/{collection}/revenue-shares', [AdminRevenueShareController::class, 'store']);
+            Route::put('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'update']);
+            Route::delete('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'destroy']);
+            Route::post('/payouts/{id}/mark-paid', [AdminPayoutController::class, 'markPaid']);
         });
     });
 });

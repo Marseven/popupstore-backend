@@ -32,4 +32,14 @@ class CollectionFactory extends Factory
     {
         return $this->state(fn () => ['is_active' => false]);
     }
+
+    public function partner(): static
+    {
+        return $this->state(fn () => ['type' => 'partner']);
+    }
+
+    public function campaign(): static
+    {
+        return $this->state(fn () => ['type' => 'campaign']);
+    }
 }

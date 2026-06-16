@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\CollectionType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -32,6 +34,8 @@ class Collection extends Model
         'color_accent',
         'is_active',
         'sort_order',
+        'type',
+        'owner_user_id',
     ];
 
     /**
@@ -44,7 +48,24 @@ class Collection extends Model
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'type' => CollectionType::class,
         ];
+    }
+
+    /**
+     * The revenue-share beneficiaries configured for this collection.
+     */
+    public function revenueShares(): HasMany
+    {
+        return $this->hasMany(RevenueShare::class);
+    }
+
+    /**
+     * The merchant who owns this collection (partner collections).
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_user_id');
     }
 
     /**

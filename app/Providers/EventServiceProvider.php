@@ -8,6 +8,7 @@ use App\Events\PaymentReceived;
 use App\Listeners\LogOrderCreated;
 use App\Listeners\LogPaymentFailed;
 use App\Listeners\LogPaymentReceived;
+use App\Listeners\RecordRevenueShares;
 use App\Listeners\SendGuestOrderConfirmation;
 use App\Listeners\SendGuestPaymentConfirmation;
 use App\Listeners\SendOrderNotification;
@@ -27,6 +28,7 @@ class EventServiceProvider extends ServiceProvider
             LogPaymentReceived::class,
             SendPaymentReceivedNotification::class,
             SendGuestPaymentConfirmation::class,
+            RecordRevenueShares::class,
         ],
         PaymentFailed::class => [
             LogPaymentFailed::class,
