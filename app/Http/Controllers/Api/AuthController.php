@@ -4,15 +4,19 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Models\User;
 use App\Services\CartService;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -54,13 +58,13 @@ class AuthController extends Controller
             ->orWhere('phone', $validated['login'])
             ->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return response()->json([
                 'message' => 'Identifiants incorrects',
             ], 401);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             return response()->json([
                 'message' => 'Votre compte a été désactivé',
             ], 403);
@@ -124,7 +128,7 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             return response()->json([
                 'message' => 'Mot de passe actuel incorrect',
             ], 422);
@@ -137,6 +141,49 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Mot de passe modifié avec succès',
+        ]);
+    }
+
+    /**
+     * Send a password reset link. Always returns the same generic response so an
+     * attacker cannot tell whether an email is registered (no enumeration).
+     */
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        Password::sendResetLink($request->only('email'));
+
+        return response()->json([
+            'message' => 'Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.',
+        ]);
+    }
+
+    /**
+     * Reset the password with a valid token, then revoke all existing sessions.
+     */
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill(['password' => Hash::make($password)])
+                    ->setRememberToken(Str::random(60));
+                $user->save();
+
+                // Any session created before the reset must no longer be valid.
+                $user->tokens()->delete();
+
+                event(new PasswordReset($user));
+            }
+        );
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return response()->json([
+                'message' => 'Lien de réinitialisation invalide ou expiré.',
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Mot de passe réinitialisé avec succès. Vous pouvez vous connecter.',
         ]);
     }
 }
