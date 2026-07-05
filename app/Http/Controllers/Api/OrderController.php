@@ -50,13 +50,13 @@ class OrderController extends Controller
         try {
             $order = DB::transaction(function () use ($validated, $user, $sessionId, $cartItems) {
                 // Calculate totals
-                $subtotal = $cartItems->sum(fn($item) => $item->product->price * $item->quantity);
+                $subtotal = $cartItems->sum(fn ($item) => $item->product->price * $item->quantity);
 
                 // Dynamic shipping fee from selected zone
                 $shippingFee = 0;
                 $shippingZoneName = null;
 
-                if (!empty($validated['shipping_zone_id'])) {
+                if (! empty($validated['shipping_zone_id'])) {
                     $zone = ShippingZone::find($validated['shipping_zone_id']);
                     if ($zone) {
                         $shippingFee = (float) $zone->fee;
@@ -105,6 +105,7 @@ class OrderController extends Controller
                         'product_name' => $product->name,
                         'product_sku' => $product->sku,
                         'size_name' => $cartItem->size?->name,
+                        'color_name' => $cartItem->color,
                         'unit_price' => $product->price,
                         'quantity' => $cartItem->quantity,
                         'total' => $product->price * $cartItem->quantity,
@@ -202,12 +203,12 @@ class OrderController extends Controller
         $order = Order::where('order_number', $validated['order_number'])
             ->where(function ($q) use ($validated) {
                 $q->where('guest_phone', $validated['phone'])
-                  ->orWhere('shipping_phone', $validated['phone']);
+                    ->orWhere('shipping_phone', $validated['phone']);
             })
             ->with(['items', 'transactions'])
             ->first();
 
-        if (!$order) {
+        if (! $order) {
             return response()->json([
                 'message' => 'Aucune commande trouvée avec ces informations',
             ], 404);

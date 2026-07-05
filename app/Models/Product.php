@@ -33,6 +33,7 @@ class Product extends Model
         'is_active',
         'is_featured',
         'sort_order',
+        'colors',
     ];
 
     /**
@@ -48,6 +49,7 @@ class Product extends Model
             'cost_price' => 'decimal:2',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'colors' => 'array',
         ];
     }
 

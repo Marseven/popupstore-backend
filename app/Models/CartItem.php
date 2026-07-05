@@ -20,6 +20,7 @@ class CartItem extends Model
         'session_id',
         'product_id',
         'size_id',
+        'color',
         'quantity',
     ];
 

@@ -17,7 +17,7 @@ class UpdateProductRequest extends FormRequest
 
         return [
             'name' => 'sometimes|string|max:255',
-            'sku' => 'sometimes|string|max:100|unique:products,sku,' . $productId,
+            'sku' => 'sometimes|string|max:100|unique:products,sku,'.$productId,
             'price' => 'sometimes|numeric|min:0',
             'compare_price' => 'nullable|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
@@ -25,6 +25,8 @@ class UpdateProductRequest extends FormRequest
             'category_id' => 'nullable|integer|exists:product_categories,id',
             'collection_id' => 'nullable|integer|exists:collections,id',
             'media_content_id' => 'nullable|integer|exists:media_contents,id',
+            'colors' => 'nullable|array',
+            'colors.*' => 'string|max:50',
             'is_active' => 'sometimes|boolean',
             'is_featured' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer',

@@ -35,6 +35,7 @@ class CartController extends Controller
         $validated = $request->validate([
             'product_id' => 'required|integer|exists:products,id',
             'size_id' => 'nullable|integer|exists:sizes,id',
+            'color' => 'nullable|string|max:50',
             'quantity' => 'sometimes|integer|min:1',
         ]);
 
@@ -46,7 +47,8 @@ class CartController extends Controller
                 $sessionId,
                 $validated['product_id'],
                 $validated['size_id'] ?? null,
-                $validated['quantity'] ?? 1
+                $validated['quantity'] ?? 1,
+                $validated['color'] ?? null
             );
 
             return response()->json([

@@ -14,17 +14,22 @@ class CartService
     public function getItems(?int $userId, ?string $sessionId): Collection
     {
         return CartItem::with(['product.images', 'product.mediaContent', 'size'])
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
+            ->when($userId, fn ($q) => $q->where('user_id', $userId))
+            ->when(! $userId && $sessionId, fn ($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
             ->get();
     }
 
-    public function addItem(?int $userId, ?string $sessionId, int $productId, ?int $sizeId, int $quantity = 1): CartItem
+    public function addItem(?int $userId, ?string $sessionId, int $productId, ?int $sizeId, int $quantity = 1, ?string $color = null): CartItem
     {
         $product = Product::findOrFail($productId);
 
-        if (!$product->is_active) {
+        if (! $product->is_active) {
             throw new BusinessException('Ce produit n\'est plus disponible', 'PRODUCT_UNAVAILABLE');
+        }
+
+        // Reject a colour that isn't offered by the product.
+        if ($color && is_array($product->colors) && ! in_array($color, $product->colors, true)) {
+            throw new BusinessException('Cette couleur n\'est pas disponible', 'COLOR_UNAVAILABLE');
         }
 
         // Check stock
@@ -33,20 +38,23 @@ class CartService
                 ->where('size_id', $sizeId)
                 ->first();
 
-            if (!$stock || $stock->quantity < $quantity) {
+            if (! $stock || $stock->quantity < $quantity) {
                 throw new InsufficientStockException($product->name, $quantity, $stock?->quantity ?? 0);
             }
         }
 
-        // Check if item already in cart
+        // A cart line is unique per (product, size, colour) — same size in a
+        // different colour is a distinct line.
         $existingItem = CartItem::where('product_id', $productId)
             ->where('size_id', $sizeId)
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->where('session_id', $sessionId))
+            ->where('color', $color)
+            ->when($userId, fn ($q) => $q->where('user_id', $userId))
+            ->when(! $userId && $sessionId, fn ($q) => $q->where('session_id', $sessionId))
             ->first();
 
         if ($existingItem) {
             $existingItem->update(['quantity' => $existingItem->quantity + $quantity]);
+
             return $existingItem->fresh();
         }
 
@@ -55,6 +63,7 @@ class CartService
             'session_id' => $userId ? null : $sessionId,
             'product_id' => $productId,
             'size_id' => $sizeId,
+            'color' => $color,
             'quantity' => $quantity,
         ]);
     }
@@ -65,6 +74,7 @@ class CartService
 
         if ($quantity <= 0) {
             $item->delete();
+
             return $item;
         }
 
@@ -74,12 +84,13 @@ class CartService
                 ->where('size_id', $item->size_id)
                 ->first();
 
-            if (!$stock || $stock->quantity < $quantity) {
+            if (! $stock || $stock->quantity < $quantity) {
                 throw new InsufficientStockException('', $quantity, $stock?->quantity ?? 0);
             }
         }
 
         $item->update(['quantity' => $quantity]);
+
         return $item->fresh();
     }
 
@@ -91,8 +102,8 @@ class CartService
 
     public function clear(?int $userId, ?string $sessionId): void
     {
-        CartItem::when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
+        CartItem::when($userId, fn ($q) => $q->where('user_id', $userId))
+            ->when(! $userId && $sessionId, fn ($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
             ->delete();
     }
 
@@ -106,6 +117,7 @@ class CartService
             $existingItem = CartItem::where('user_id', $userId)
                 ->where('product_id', $sessionItem->product_id)
                 ->where('size_id', $sessionItem->size_id)
+                ->where('color', $sessionItem->color)
                 ->first();
 
             if ($existingItem) {
@@ -126,7 +138,7 @@ class CartService
     {
         $items = $this->getItems($userId, $sessionId);
 
-        $subtotal = $items->sum(fn($item) => $item->product->price * $item->quantity);
+        $subtotal = $items->sum(fn ($item) => $item->product->price * $item->quantity);
         $itemCount = $items->sum('quantity');
 
         return [
@@ -139,8 +151,8 @@ class CartService
     private function findCartItem(int $cartItemId, ?int $userId, ?string $sessionId): CartItem
     {
         return CartItem::where('id', $cartItemId)
-            ->when($userId, fn($q) => $q->where('user_id', $userId))
-            ->when(!$userId && $sessionId, fn($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
+            ->when($userId, fn ($q) => $q->where('user_id', $userId))
+            ->when(! $userId && $sessionId, fn ($q) => $q->whereNull('user_id')->where('session_id', $sessionId))
             ->firstOrFail();
     }
 }
