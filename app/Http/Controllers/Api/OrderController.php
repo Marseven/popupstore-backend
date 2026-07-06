@@ -173,7 +173,12 @@ class OrderController extends Controller
         $sessionId = $request->header('X-Session-Id');
 
         $query = Order::where('order_number', $orderNumber)
-            ->with(['items.product.images', 'transactions']);
+            ->with([
+                'items.product.images',
+                'items.product.mediaContents:id,uuid,title,type,duration',
+                'items.product.mediaContent:id,uuid,title,type,duration',
+                'transactions',
+            ]);
 
         if ($user) {
             $query->where('user_id', $user->id);
@@ -196,16 +201,26 @@ class OrderController extends Controller
     public function track(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'phone' => 'required|string|max:20',
+            'contact' => 'required_without:phone|nullable|string|max:255',
+            'phone' => 'required_without:contact|nullable|string|max:20',
             'order_number' => 'required|string|max:50',
         ]);
 
+        // The buyer identifies with their order number + either email or phone.
+        $contact = $validated['contact'] ?? $validated['phone'];
+
         $order = Order::where('order_number', $validated['order_number'])
-            ->where(function ($q) use ($validated) {
-                $q->where('guest_phone', $validated['phone'])
-                    ->orWhere('shipping_phone', $validated['phone']);
+            ->where(function ($q) use ($contact) {
+                $q->where('guest_phone', $contact)
+                    ->orWhere('shipping_phone', $contact)
+                    ->orWhere('guest_email', $contact);
             })
-            ->with(['items', 'transactions'])
+            ->with([
+                'items.product.images',
+                'items.product.mediaContents:id,uuid,title,type,duration',
+                'items.product.mediaContent:id,uuid,title,type,duration',
+                'transactions',
+            ])
             ->first();
 
         if (! $order) {

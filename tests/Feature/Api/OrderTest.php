@@ -338,7 +338,7 @@ class OrderTest extends TestCase
             'guest_phone' => '+24177000099',
         ]);
 
-        $response = $this->getJson("/api/orders/track?phone=+24177000099&order_number={$order->order_number}");
+        $response = $this->getJson('/api/orders/track?phone=%2B24177000099&order_number='.$order->order_number);
 
         $response->assertOk()
             ->assertJsonPath('order.order_number', $order->order_number);
@@ -350,7 +350,7 @@ class OrderTest extends TestCase
             'shipping_phone' => '+24177000088',
         ]);
 
-        $response = $this->getJson("/api/orders/track?phone=+24177000088&order_number={$order->order_number}");
+        $response = $this->getJson('/api/orders/track?phone=%2B24177000088&order_number='.$order->order_number);
 
         $response->assertOk()
             ->assertJsonPath('order.order_number', $order->order_number);
