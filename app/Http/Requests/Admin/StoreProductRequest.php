@@ -23,6 +23,8 @@ class StoreProductRequest extends FormRequest
             'category_id' => 'nullable|integer|exists:product_categories,id',
             'collection_id' => 'nullable|integer|exists:collections,id',
             'media_content_id' => 'nullable|integer|exists:media_contents,id',
+            'media_content_ids' => 'nullable|array',
+            'media_content_ids.*' => 'integer|exists:media_contents,id',
             'colors' => 'nullable|array',
             'colors.*' => 'string|max:50',
             'is_active' => 'sometimes|boolean',

@@ -66,10 +66,15 @@ class ProductController extends Controller
                 // Ensure unique slug
                 $slugCount = Product::where('slug', $validated['slug'])->count();
                 if ($slugCount > 0) {
-                    $validated['slug'] .= '-' . ($slugCount + 1);
+                    $validated['slug'] .= '-'.($slugCount + 1);
                 }
 
-                $product = Product::create(collect($validated)->except(['images', 'primary_image_index', 'stocks'])->toArray());
+                $product = Product::create(collect($validated)->except(['images', 'primary_image_index', 'stocks', 'media_content_ids'])->toArray());
+
+                // Media contents unlocked by the product QR (audio + video)
+                if (array_key_exists('media_content_ids', $validated)) {
+                    $product->mediaContents()->sync($this->pivotOrder($validated['media_content_ids'] ?? []));
+                }
 
                 // Handle image uploads
                 if ($request->hasFile('images')) {
@@ -89,7 +94,7 @@ class ProductController extends Controller
                 }
 
                 // Create stock entries
-                if (!empty($validated['stocks'])) {
+                if (! empty($validated['stocks'])) {
                     foreach ($validated['stocks'] as $stockData) {
                         ProductStock::create([
                             'product_id' => $product->id,
@@ -120,7 +125,7 @@ class ProductController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $product = Product::with(['images', 'stocks.size', 'category', 'collection', 'mediaContent'])
+        $product = Product::with(['images', 'stocks.size', 'category', 'collection', 'mediaContent', 'mediaContents'])
             ->findOrFail($id);
 
         return response()->json([
@@ -154,15 +159,19 @@ class ProductController extends Controller
                     $slug = Str::slug($validated['name']);
                     $slugCount = Product::where('slug', $slug)->where('id', '!=', $product->id)->count();
                     if ($slugCount > 0) {
-                        $slug .= '-' . ($slugCount + 1);
+                        $slug .= '-'.($slugCount + 1);
                     }
                     $validated['slug'] = $slug;
                 }
 
-                $product->update(collect($validated)->except(['images', 'primary_image_index', 'remove_image_ids'])->toArray());
+                $product->update(collect($validated)->except(['images', 'primary_image_index', 'remove_image_ids', 'media_content_ids'])->toArray());
+
+                if (array_key_exists('media_content_ids', $validated)) {
+                    $product->mediaContents()->sync($this->pivotOrder($validated['media_content_ids'] ?? []));
+                }
 
                 // Remove specified images
-                if (!empty($validated['remove_image_ids'])) {
+                if (! empty($validated['remove_image_ids'])) {
                     $imagesToRemove = ProductImage::where('product_id', $product->id)
                         ->whereIn('id', $validated['remove_image_ids'])
                         ->get();
@@ -223,7 +232,7 @@ class ProductController extends Controller
 
         if ($orderCount > 0) {
             return response()->json([
-                'message' => 'Ce produit est lié à ' . $orderCount . ' commande(s). Voulez-vous le désactiver plutôt que le supprimer ?',
+                'message' => 'Ce produit est lié à '.$orderCount.' commande(s). Voulez-vous le désactiver plutôt que le supprimer ?',
                 'has_orders' => true,
                 'order_count' => $orderCount,
             ], 409);
@@ -285,5 +294,37 @@ class ProductController extends Controller
             'message' => 'Stock mis à jour avec succès',
             'stocks' => $product->stocks()->with('size')->get(),
         ]);
+    }
+
+    /**
+     * Download a single QR code that unlocks all of the product's media
+     * (the /unlock/{slug} hub page).
+     */
+    public function downloadQr(int $id)
+    {
+        $product = Product::findOrFail($id);
+
+        $url = rtrim(config('app.frontend_url'), '/').'/unlock/'.$product->slug;
+
+        $png = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')
+            ->size(1000)->errorCorrection('H')->margin(2)->generate($url);
+
+        return response($png, 200, [
+            'Content-Type' => 'image/png',
+            'Content-Disposition' => 'attachment; filename="qr-'.$product->slug.'.png"',
+        ]);
+    }
+
+    /**
+     * Map an ordered list of media ids to sync payload with sort_order.
+     */
+    private function pivotOrder(array $ids): array
+    {
+        $payload = [];
+        foreach (array_values($ids) as $i => $mediaId) {
+            $payload[$mediaId] = ['sort_order' => $i];
+        }
+
+        return $payload;
     }
 }

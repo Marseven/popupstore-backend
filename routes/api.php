@@ -60,6 +60,7 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/featured', [ProductController::class, 'featured']);
 Route::get('/products/category/{slug}', [ProductController::class, 'byCategory']);
 Route::get('/products/collection/{slug}', [ProductController::class, 'byCollection']);
+Route::get('/products/{slug}/media', [ProductController::class, 'media']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);
 
 // Categories (public, cached 5min)
@@ -192,6 +193,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/products/{id}', [AdminProductController::class, 'update']);
         Route::delete('/products/{id}', [AdminProductController::class, 'destroy']);
         Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
+        Route::get('/products/{id}/qr-download', [AdminProductController::class, 'downloadQr']);
 
         // Shipping zones management
         Route::get('/shipping-zones', [AdminShippingZoneController::class, 'index']);

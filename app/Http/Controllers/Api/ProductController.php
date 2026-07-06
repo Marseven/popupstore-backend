@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Collection;
 use App\Models\Product;
 use App\Models\ProductCategory;
-use App\Models\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -22,12 +22,12 @@ class ProductController extends Controller
 
         // Filter by category
         if ($request->filled('category')) {
-            $query->whereHas('category', fn($q) => $q->where('slug', $request->category));
+            $query->whereHas('category', fn ($q) => $q->where('slug', $request->category));
         }
 
         // Filter by collection
         if ($request->filled('collection')) {
-            $query->whereHas('collection', fn($q) => $q->where('slug', $request->collection));
+            $query->whereHas('collection', fn ($q) => $q->where('slug', $request->collection));
         }
 
         // Filter by featured
@@ -81,6 +81,28 @@ class ProductController extends Controller
 
         return response()->json([
             'product' => $product,
+        ]);
+    }
+
+    /**
+     * Public media hub for a product — the media unlocked by its QR code.
+     */
+    public function media(string $slug): JsonResponse
+    {
+        $product = Product::where('slug', $slug)->active()->firstOrFail();
+
+        $media = $product->mediaContents()
+            ->get(['media_contents.id', 'uuid', 'title', 'type', 'duration'])
+            ->map(fn ($m) => [
+                'uuid' => $m->uuid,
+                'title' => $m->title,
+                'type' => $m->type,
+                'duration' => $m->duration,
+            ]);
+
+        return response()->json([
+            'product' => ['name' => $product->name, 'slug' => $product->slug],
+            'media' => $media,
         ]);
     }
 

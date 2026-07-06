@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -78,11 +79,21 @@ class Product extends Model
     }
 
     /**
-     * The media content that the product belongs to.
+     * The primary media content (legacy single link, kept for compatibility).
      */
     public function mediaContent(): BelongsTo
     {
         return $this->belongsTo(MediaContent::class);
+    }
+
+    /**
+     * All media contents unlocked by this product's QR (audio + video).
+     */
+    public function mediaContents(): BelongsToMany
+    {
+        return $this->belongsToMany(MediaContent::class, 'media_product')
+            ->withPivot('sort_order')
+            ->orderBy('media_product.sort_order');
     }
 
     /**
