@@ -87,10 +87,12 @@ class GuestConfirmationTest extends TestCase
         $this->assertNotContains('mail', $channels);
     }
 
-    public function test_listeners_are_queued_after_commit(): void
+    public function test_listeners_are_synchronous_after_commit(): void
     {
+        // Emails must NOT be queued (no worker dependency) but still fire only
+        // after the order/payment commits.
         foreach ([SendGuestOrderConfirmation::class, SendGuestPaymentConfirmation::class] as $listener) {
-            $this->assertInstanceOf(ShouldQueue::class, app($listener));
+            $this->assertNotInstanceOf(ShouldQueue::class, app($listener));
             $this->assertInstanceOf(ShouldHandleEventsAfterCommit::class, app($listener));
         }
     }

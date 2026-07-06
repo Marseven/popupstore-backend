@@ -5,15 +5,12 @@ namespace App\Notifications;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Notifications\Channels\SmsChannel;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class GuestPaymentConfirmation extends Notification implements ShouldQueue
+// Sent synchronously (no queue) so the confirmation goes out immediately.
+class GuestPaymentConfirmation extends Notification
 {
-    use Queueable;
-
     public function __construct(public Order $order, public PaymentTransaction $transaction) {}
 
     public function via(object $notifiable): array

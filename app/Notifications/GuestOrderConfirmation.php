@@ -4,15 +4,12 @@ namespace App\Notifications;
 
 use App\Models\Order;
 use App\Notifications\Channels\SmsChannel;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class GuestOrderConfirmation extends Notification implements ShouldQueue
+// Sent synchronously (no queue) so the confirmation goes out immediately.
+class GuestOrderConfirmation extends Notification
 {
-    use Queueable;
-
     public function __construct(public Order $order) {}
 
     public function via(object $notifiable): array

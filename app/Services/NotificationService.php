@@ -39,8 +39,17 @@ class NotificationService
             return;
         }
 
-        NotificationFacade::route('mail', $email)
-            ->route('sms', $phone)
-            ->notify($notification);
+        // Sent synchronously — never let a mail/SMS gateway failure break the
+        // order or webhook flow that triggered it.
+        try {
+            NotificationFacade::route('mail', $email)
+                ->route('sms', $phone)
+                ->notify($notification);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Guest notification failed', [
+                'order' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

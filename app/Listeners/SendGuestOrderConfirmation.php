@@ -6,14 +6,11 @@ use App\Events\OrderCreated;
 use App\Notifications\GuestOrderConfirmation;
 use App\Services\NotificationService;
 use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
-class SendGuestOrderConfirmation implements ShouldHandleEventsAfterCommit, ShouldQueue
+// Synchronous (no ShouldQueue) so the email/SMS is sent during the request,
+// but only after the order transaction commits.
+class SendGuestOrderConfirmation implements ShouldHandleEventsAfterCommit
 {
-    public int $tries = 3;
-
-    public int $backoff = 30;
-
     public function __construct(private NotificationService $notificationService) {}
 
     public function handle(OrderCreated $event): void

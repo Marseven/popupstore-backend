@@ -2,15 +2,13 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ResetPasswordNotification extends Notification implements ShouldQueue
+// Sent synchronously (no queue) so the reset email goes out during the request,
+// without depending on a running queue worker.
+class ResetPasswordNotification extends Notification
 {
-    use Queueable;
-
     public function __construct(public string $token) {}
 
     public function via(object $notifiable): array

@@ -150,7 +150,13 @@ class AuthController extends Controller
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        Password::sendResetLink($request->only('email'));
+        // Sent synchronously (no queue). Swallow gateway errors so the response
+        // stays generic and never leaks whether the email exists or SMTP failed.
+        try {
+            Password::sendResetLink($request->only('email'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Password reset link send failed', ['error' => $e->getMessage()]);
+        }
 
         return response()->json([
             'message' => 'Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.',
