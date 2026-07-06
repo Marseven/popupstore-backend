@@ -32,12 +32,12 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPasswordNotification::class);
     }
 
-    public function test_forgot_password_does_not_leak_unknown_email(): void
+    public function test_forgot_password_returns_404_for_unknown_email(): void
     {
         Notification::fake();
 
         $this->postJson('/api/auth/forgot-password', ['email' => 'nobody@example.com'])
-            ->assertOk(); // same generic 200 — no enumeration
+            ->assertStatus(404); // product choice: tell the user the email is unknown
 
         Notification::assertNothingSent();
     }

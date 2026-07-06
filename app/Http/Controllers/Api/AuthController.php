@@ -145,22 +145,33 @@ class AuthController extends Controller
     }
 
     /**
-     * Send a password reset link. Always returns the same generic response so an
-     * attacker cannot tell whether an email is registered (no enumeration).
+     * Send a password reset link. Returns an explicit message telling the user
+     * whether the email is registered (product choice — rate limited to 5/min).
      */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        // Sent synchronously (no queue). Swallow gateway errors so the response
-        // stays generic and never leaks whether the email exists or SMTP failed.
+        // Sent synchronously (no queue).
         try {
-            Password::sendResetLink($request->only('email'));
+            $status = Password::sendResetLink($request->only('email'));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Password reset link send failed', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => "L'envoi de l'email a échoué. Veuillez réessayer plus tard.",
+            ], 500);
         }
 
-        return response()->json([
-            'message' => 'Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.',
-        ]);
+        return match ($status) {
+            Password::RESET_LINK_SENT => response()->json([
+                'message' => 'Un lien de réinitialisation a été envoyé à votre adresse email.',
+            ]),
+            Password::RESET_THROTTLED => response()->json([
+                'message' => 'Un lien a déjà été envoyé récemment. Veuillez patienter avant de réessayer.',
+            ], 429),
+            default => response()->json([
+                'message' => "Aucun compte n'est associé à cette adresse email.",
+            ], 404),
+        };
     }
 
     /**
