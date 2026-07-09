@@ -70,6 +70,14 @@ class CampaignController extends Controller
         return response()->json(['campaign' => $campaign->fresh()]);
     }
 
+    public function destroy(int $id): JsonResponse
+    {
+        $campaign = Campaign::findOrFail($id);
+        $campaign->delete(); // soft delete
+
+        return response()->json(['message' => 'Campagne supprimée']);
+    }
+
     public function storeTeam(Request $request, int $id): JsonResponse
     {
         $campaign = Campaign::findOrFail($id);

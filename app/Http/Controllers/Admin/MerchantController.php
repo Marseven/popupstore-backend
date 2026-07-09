@@ -50,4 +50,12 @@ class MerchantController extends Controller
 
         return response()->json(['merchant_profile' => $this->merchants->suspend($profile)]);
     }
+
+    public function destroy(int $id): JsonResponse
+    {
+        $profile = MerchantProfile::findOrFail($id);
+        $profile->delete(); // soft delete — keeps the user account and their collection
+
+        return response()->json(['message' => 'Marchand supprimé']);
+    }
 }

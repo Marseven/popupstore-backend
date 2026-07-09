@@ -214,6 +214,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/campaigns/{id}', [AdminCampaignController::class, 'show']);
         Route::put('/campaigns/{id}', [AdminCampaignController::class, 'update']);
         Route::post('/campaigns/{id}/close', [AdminCampaignController::class, 'close']);
+        Route::delete('/campaigns/{id}', [AdminCampaignController::class, 'destroy']);
         Route::post('/campaigns/{id}/teams', [AdminCampaignController::class, 'storeTeam']);
 
         // Orders management
@@ -279,6 +280,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/merchants', [AdminMerchantController::class, 'store']);
             Route::post('/merchants/{id}/approve', [AdminMerchantController::class, 'approve']);
             Route::post('/merchants/{id}/suspend', [AdminMerchantController::class, 'suspend']);
+            Route::delete('/merchants/{id}', [AdminMerchantController::class, 'destroy']);
         });
     });
 });
