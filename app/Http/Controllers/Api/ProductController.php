@@ -18,6 +18,7 @@ class ProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Product::active()
+            ->visibleTo($request->user())
             ->with(['images', 'category']);
 
         // Filter by category
@@ -72,10 +73,11 @@ class ProductController extends Controller
     /**
      * Get a single product by slug.
      */
-    public function show(string $slug): JsonResponse
+    public function show(Request $request, string $slug): JsonResponse
     {
         $product = Product::where('slug', $slug)
             ->active()
+            ->visibleTo($request->user())
             ->with(['images', 'stocks.size', 'category', 'collection', 'mediaContent'])
             ->firstOrFail();
 
@@ -109,11 +111,16 @@ class ProductController extends Controller
     /**
      * Get featured products (limit 8).
      */
-    public function featured(): JsonResponse
+    public function featured(Request $request): JsonResponse
     {
-        $products = Cache::remember('products.featured', 300, function () {
+        // Separate cache entries: guests must never be served a secret product.
+        $user = $request->user();
+        $cacheKey = $user ? 'products.featured.auth' : 'products.featured.public';
+
+        $products = Cache::remember($cacheKey, 300, function () use ($user) {
             return Product::active()
                 ->featured()
+                ->visibleTo($user)
                 ->with(['images', 'category'])
                 ->orderBy('sort_order')
                 ->limit(8)
@@ -137,6 +144,7 @@ class ProductController extends Controller
         $perPage = min($request->get('per_page', 15), 50);
 
         $products = Product::active()
+            ->visibleTo($request->user())
             ->where('category_id', $category->id)
             ->with(['images', 'category'])
             ->orderBy('sort_order')
@@ -160,6 +168,7 @@ class ProductController extends Controller
         $perPage = min($request->get('per_page', 15), 50);
 
         $products = Product::active()
+            ->visibleTo($request->user())
             ->where('collection_id', $collection->id)
             ->with(['images', 'category'])
             ->orderBy('sort_order')

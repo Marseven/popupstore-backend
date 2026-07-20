@@ -33,6 +33,7 @@ class Product extends Model
         'cost_price',
         'is_active',
         'is_featured',
+        'is_secret',
         'sort_order',
         'colors',
     ];
@@ -50,8 +51,17 @@ class Product extends Model
             'cost_price' => 'decimal:2',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
+            'is_secret' => 'boolean',
             'colors' => 'array',
         ];
+    }
+
+    /**
+     * Hide secret products from guests; authenticated customers see everything.
+     */
+    public function scopeVisibleTo(Builder $query, ?object $user): Builder
+    {
+        return $query->when(! $user, fn ($q) => $q->where('is_secret', false));
     }
 
     /**

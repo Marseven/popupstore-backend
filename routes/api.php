@@ -55,13 +55,16 @@ Route::middleware('throttle:auth')->group(function () {
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 });
 
-// Products (public)
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/featured', [ProductController::class, 'featured']);
-Route::get('/products/category/{slug}', [ProductController::class, 'byCategory']);
-Route::get('/products/collection/{slug}', [ProductController::class, 'byCollection']);
-Route::get('/products/{slug}/media', [ProductController::class, 'media']);
-Route::get('/products/{slug}', [ProductController::class, 'show']);
+// Products (public — auth.optional so secret products can be revealed to
+// authenticated customers while staying hidden from guests)
+Route::middleware('auth.optional')->group(function () {
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/featured', [ProductController::class, 'featured']);
+    Route::get('/products/category/{slug}', [ProductController::class, 'byCategory']);
+    Route::get('/products/collection/{slug}', [ProductController::class, 'byCollection']);
+    Route::get('/products/{slug}/media', [ProductController::class, 'media']);
+    Route::get('/products/{slug}', [ProductController::class, 'show']);
+});
 
 // Categories (public, cached 5min)
 Route::get('/categories', function () {

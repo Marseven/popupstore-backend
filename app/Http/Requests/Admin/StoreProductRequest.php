@@ -29,6 +29,7 @@ class StoreProductRequest extends FormRequest
             'colors.*' => 'string|max:50',
             'is_active' => 'sometimes|boolean',
             'is_featured' => 'sometimes|boolean',
+            'is_secret' => 'sometimes|boolean',
             'sort_order' => 'sometimes|integer',
             'images' => 'nullable|array|max:4',
             'images.*' => 'image|max:5120',
