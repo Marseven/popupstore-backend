@@ -57,6 +57,18 @@ class Product extends Model
     }
 
     /**
+     * Expose whether the product unlocks any exclusive media (legacy single link
+     * OR the multi-media pivot). Lets the shop show the QR badge. Uses the
+     * eager-loaded count when available and never fires a query on its own.
+     */
+    protected $appends = ['has_media'];
+
+    public function getHasMediaAttribute(): bool
+    {
+        return $this->media_content_id !== null || (int) ($this->media_contents_count ?? 0) > 0;
+    }
+
+    /**
      * Hide secret products from guests; authenticated customers see everything.
      */
     public function scopeVisibleTo(Builder $query, ?object $user): Builder

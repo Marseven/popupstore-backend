@@ -19,7 +19,7 @@ class ProductController extends Controller
     {
         $query = Product::active()
             ->visibleTo($request->user())
-            ->with(['images', 'category']);
+            ->with(['images', 'category'])->withCount('mediaContents');
 
         // Filter by category
         if ($request->filled('category')) {
@@ -121,7 +121,7 @@ class ProductController extends Controller
             $featured = Product::active()
                 ->featured()
                 ->visibleTo($user)
-                ->with(['images', 'category'])
+                ->with(['images', 'category'])->withCount('mediaContents')
                 ->orderBy('sort_order')
                 ->limit(8)
                 ->get();
@@ -132,7 +132,7 @@ class ProductController extends Controller
                 $fill = Product::active()
                     ->visibleTo($user)
                     ->whereNotIn('id', $featured->pluck('id'))
-                    ->with(['images', 'category'])
+                    ->with(['images', 'category'])->withCount('mediaContents')
                     ->latest()
                     ->limit(5 - $featured->count())
                     ->get();
@@ -162,7 +162,7 @@ class ProductController extends Controller
         $products = Product::active()
             ->visibleTo($request->user())
             ->where('category_id', $category->id)
-            ->with(['images', 'category'])
+            ->with(['images', 'category'])->withCount('mediaContents')
             ->orderBy('sort_order')
             ->paginate($perPage);
 
@@ -186,7 +186,7 @@ class ProductController extends Controller
         $products = Product::active()
             ->visibleTo($request->user())
             ->where('collection_id', $collection->id)
-            ->with(['images', 'category'])
+            ->with(['images', 'category'])->withCount('mediaContents')
             ->orderBy('sort_order')
             ->paginate($perPage);
 
