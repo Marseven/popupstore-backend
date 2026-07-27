@@ -11,11 +11,23 @@ class StoreProductRequest extends FormRequest
         return true;
     }
 
+    /**
+     * The admin form posts `stocks` as a JSON string (multipart form) — decode
+     * it so the array rules below can validate it.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('stocks'))) {
+            $decoded = json_decode($this->input('stocks'), true);
+            $this->merge(['stocks' => is_array($decoded) ? $decoded : []]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'name' => 'required|string|max:255',
-            'sku' => 'required|string|max:100|unique:products,sku',
+            'sku' => 'nullable|string|max:100|unique:products,sku', // auto-generated when empty
             'price' => 'required|numeric|min:0',
             'compare_price' => 'nullable|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
@@ -35,7 +47,7 @@ class StoreProductRequest extends FormRequest
             'images.*' => 'image|max:5120',
             'primary_image_index' => 'nullable|integer|min:0',
             'stocks' => 'nullable|array',
-            'stocks.*.size_id' => 'required_with:stocks|integer|exists:sizes,id',
+            'stocks.*.size_name' => 'required_with:stocks|string|max:20',
             'stocks.*.quantity' => 'required_with:stocks|integer|min:0',
             'stocks.*.low_stock_threshold' => 'nullable|integer|min:0',
         ];

@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductStock;
+use App\Models\Size;
 use App\Notifications\LowStockNotification;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -69,6 +70,13 @@ class ProductController extends Controller
                     $validated['slug'] .= '-'.($slugCount + 1);
                 }
 
+                // Auto-generate a unique SKU when the form doesn't provide one.
+                if (empty($validated['sku'])) {
+                    do {
+                        $validated['sku'] = 'POP-'.strtoupper(Str::random(6));
+                    } while (Product::where('sku', $validated['sku'])->exists());
+                }
+
                 $product = Product::create(collect($validated)->except(['images', 'primary_image_index', 'stocks', 'media_content_ids'])->toArray());
 
                 // Media contents unlocked by the product QR (audio + video)
@@ -93,12 +101,13 @@ class ProductController extends Controller
                     }
                 }
 
-                // Create stock entries
+                // Create stock entries (form sends size by name; resolve/create the Size)
                 if (! empty($validated['stocks'])) {
                     foreach ($validated['stocks'] as $stockData) {
+                        $size = Size::firstOrCreate(['name' => trim($stockData['size_name'])]);
                         ProductStock::create([
                             'product_id' => $product->id,
-                            'size_id' => $stockData['size_id'],
+                            'size_id' => $size->id,
                             'quantity' => $stockData['quantity'],
                             'low_stock_threshold' => $stockData['low_stock_threshold'] ?? 5,
                         ]);
@@ -171,7 +180,7 @@ class ProductController extends Controller
                     $validated['slug'] = $slug;
                 }
 
-                $product->update(collect($validated)->except(['images', 'primary_image_index', 'remove_image_ids', 'media_content_ids'])->toArray());
+                $product->update(collect($validated)->except(['images', 'primary_image_index', 'remove_image_ids', 'media_content_ids', 'stocks'])->toArray());
 
                 if (array_key_exists('media_content_ids', $validated)) {
                     $product->mediaContents()->sync($this->pivotOrder($validated['media_content_ids'] ?? []));
@@ -222,6 +231,25 @@ class ProductController extends Controller
                 // Guarantee at least one primary image remains after edits.
                 if ($product->images()->where('is_primary', true)->count() === 0) {
                     $product->images()->orderBy('sort_order')->first()?->update(['is_primary' => true]);
+                }
+
+                // Sync stocks (form sends the full size/quantity list by name).
+                if (array_key_exists('stocks', $validated)) {
+                    $keepSizeIds = [];
+                    foreach ($validated['stocks'] as $stockData) {
+                        $size = Size::firstOrCreate(['name' => trim($stockData['size_name'])]);
+                        ProductStock::updateOrCreate(
+                            ['product_id' => $product->id, 'size_id' => $size->id],
+                            [
+                                'quantity' => $stockData['quantity'],
+                                'low_stock_threshold' => $stockData['low_stock_threshold'] ?? 5,
+                            ]
+                        );
+                        $keepSizeIds[] = $size->id;
+                    }
+                    ProductStock::where('product_id', $product->id)
+                        ->whereNotIn('size_id', $keepSizeIds)
+                        ->delete();
                 }
             });
 

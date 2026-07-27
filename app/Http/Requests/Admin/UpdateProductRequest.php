@@ -11,6 +11,14 @@ class UpdateProductRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('stocks'))) {
+            $decoded = json_decode($this->input('stocks'), true);
+            $this->merge(['stocks' => is_array($decoded) ? $decoded : []]);
+        }
+    }
+
     public function rules(): array
     {
         $productId = $this->route('id');
@@ -38,6 +46,10 @@ class UpdateProductRequest extends FormRequest
             'primary_image_index' => 'nullable|integer|min:0',
             'remove_image_ids' => 'nullable|array',
             'remove_image_ids.*' => 'integer|exists:product_images,id',
+            'stocks' => 'nullable|array',
+            'stocks.*.size_name' => 'required_with:stocks|string|max:20',
+            'stocks.*.quantity' => 'required_with:stocks|integer|min:0',
+            'stocks.*.low_stock_threshold' => 'nullable|integer|min:0',
         ];
     }
 }
