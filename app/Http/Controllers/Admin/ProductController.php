@@ -141,19 +141,26 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         $validated = $request->validated();
 
-        // Check max 4 images: (existing - removed + new) <= 4
-        $existingCount = $product->images()->count();
-        $removedCount = count($validated['remove_image_ids'] ?? []);
+        // The form posts `existing_images` = the IDs to KEEP (JSON string). When
+        // present, every other image is removed. Absent → keep all (no change).
+        $keptIds = null;
+        if ($request->has('existing_images')) {
+            $decoded = json_decode((string) $request->input('existing_images'), true);
+            $keptIds = is_array($decoded) ? array_map('intval', $decoded) : [];
+        }
+
+        // Max 4 images: kept + new <= 4.
+        $keptCount = $keptIds !== null ? count($keptIds) : $product->images()->count();
         $newCount = $request->hasFile('images') ? count($request->file('images')) : 0;
 
-        if (($existingCount - $removedCount + $newCount) > 4) {
+        if (($keptCount + $newCount) > 4) {
             return response()->json([
                 'message' => 'Un produit ne peut pas avoir plus de 4 images.',
             ], 422);
         }
 
         try {
-            DB::transaction(function () use ($validated, $request, $product) {
+            DB::transaction(function () use ($validated, $request, $product, $keptIds) {
                 // Update slug if name changed
                 if (isset($validated['name']) && $validated['name'] !== $product->name) {
                     $slug = Str::slug($validated['name']);
@@ -170,21 +177,27 @@ class ProductController extends Controller
                     $product->mediaContents()->sync($this->pivotOrder($validated['media_content_ids'] ?? []));
                 }
 
-                // Remove specified images
-                if (! empty($validated['remove_image_ids'])) {
-                    $imagesToRemove = ProductImage::where('product_id', $product->id)
-                        ->whereIn('id', $validated['remove_image_ids'])
+                // Remove images the user dropped, and reorder the ones they kept.
+                if ($keptIds !== null) {
+                    $toRemove = ProductImage::where('product_id', $product->id)
+                        ->whereNotIn('id', $keptIds)
                         ->get();
 
-                    foreach ($imagesToRemove as $image) {
+                    foreach ($toRemove as $image) {
                         Storage::disk('public')->delete($image->path);
                         $image->delete();
                     }
+
+                    foreach (array_values($keptIds) as $order => $imgId) {
+                        ProductImage::where('product_id', $product->id)
+                            ->where('id', $imgId)
+                            ->update(['sort_order' => $order]);
+                    }
                 }
 
-                // Handle new image uploads
+                // Handle new image uploads (appended after the kept ones).
                 if ($request->hasFile('images')) {
-                    $existingCount = $product->images()->count();
+                    $base = $product->images()->count();
                     $primaryIndex = $validated['primary_image_index'] ?? null;
 
                     foreach ($request->file('images') as $index => $imageFile) {
@@ -195,16 +208,20 @@ class ProductController extends Controller
                             'path' => $path,
                             'alt_text' => $product->name,
                             'is_primary' => $primaryIndex !== null && $index === $primaryIndex,
-                            'sort_order' => $existingCount + $index,
+                            'sort_order' => $base + $index,
                         ]);
                     }
 
-                    // If primary image was set, unset others
                     if ($primaryIndex !== null) {
                         $product->images()
-                            ->where('sort_order', '!=', $existingCount + $primaryIndex)
+                            ->where('sort_order', '!=', $base + $primaryIndex)
                             ->update(['is_primary' => false]);
                     }
+                }
+
+                // Guarantee at least one primary image remains after edits.
+                if ($product->images()->where('is_primary', true)->count() === 0) {
+                    $product->images()->orderBy('sort_order')->first()?->update(['is_primary' => true]);
                 }
             });
 
