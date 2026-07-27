@@ -10,6 +10,7 @@ use App\Models\MediaContent;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -59,11 +60,24 @@ class MediaController extends Controller
     {
         $validated = $request->validated();
 
+        $file = $request->file('file');
+        Log::info('Media store: begin', [
+            'title' => $validated['title'] ?? null,
+            'type' => $validated['type'] ?? null,
+            'has_file' => (bool) $file,
+            'original_name' => $file?->getClientOriginalName(),
+            'reported_size' => $file?->getSize(),
+            'mime' => $file?->getClientMimeType(),
+            'is_valid' => $file?->isValid(),
+            'upload_error' => $file?->getError(),
+            'has_thumbnail' => $request->hasFile('thumbnail'),
+        ]);
+
         try {
             // Store the media file
-            $file = $request->file('file');
-            $filePath = $file->store('media/' . $validated['type'], 'local');
+            $filePath = $file->store('media/'.$validated['type'], 'local');
             $fileSize = $file->getSize();
+            Log::info('Media store: file saved', ['path' => $filePath, 'size' => $fileSize]);
 
             // Prepare media data
             $mediaData = [
@@ -81,15 +95,17 @@ class MediaController extends Controller
             if ($request->hasFile('thumbnail')) {
                 $thumbnailPath = $request->file('thumbnail')->store('media/thumbnails', 'public');
                 $mediaData['thumbnail'] = $thumbnailPath;
+                Log::info('Media store: thumbnail saved', ['path' => $thumbnailPath]);
             }
 
             // Ensure unique slug
             $slugCount = MediaContent::where('slug', $mediaData['slug'])->count();
             if ($slugCount > 0) {
-                $mediaData['slug'] .= '-' . ($slugCount + 1);
+                $mediaData['slug'] .= '-'.($slugCount + 1);
             }
 
             $media = MediaContent::create($mediaData);
+            Log::info('Media store: row created', ['id' => $media->id, 'uuid' => $media->uuid]);
 
             // Dispatch QR code generation to queue
             GenerateQrCode::dispatch($media);
@@ -98,7 +114,14 @@ class MediaController extends Controller
                 'message' => 'Contenu média créé avec succès',
                 'media' => $media->fresh()->load('collection'),
             ], 201);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('Media store failed', [
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile().':'.$e->getLine(),
+                'trace' => collect($e->getTrace())->take(5)->map(fn ($t) => ($t['file'] ?? '?').':'.($t['line'] ?? '?'))->all(),
+            ]);
+
             return response()->json([
                 'message' => 'Erreur lors de la création du contenu média',
                 'error' => $e->getMessage(),
@@ -137,7 +160,7 @@ class MediaController extends Controller
             $slug = Str::slug($validated['title']);
             $slugCount = MediaContent::where('slug', $slug)->where('id', '!=', $media->id)->count();
             if ($slugCount > 0) {
-                $slug .= '-' . ($slugCount + 1);
+                $slug .= '-'.($slugCount + 1);
             }
             $validated['slug'] = $slug;
         }
@@ -170,7 +193,7 @@ class MediaController extends Controller
         $productCount = $media->products()->count();
         if ($productCount > 0) {
             return response()->json([
-                'message' => 'Ce contenu média est lié à ' . $productCount . ' produit(s). Veuillez d\'abord supprimer les liens.',
+                'message' => 'Ce contenu média est lié à '.$productCount.' produit(s). Veuillez d\'abord supprimer les liens.',
                 'has_products' => true,
                 'product_count' => $productCount,
             ], 409);
@@ -205,13 +228,13 @@ class MediaController extends Controller
 
         $path = $this->qrCodeService->downloadQrCode($media);
 
-        if (!$path) {
+        if (! $path) {
             return response()->json([
                 'message' => 'QR code introuvable',
             ], 404);
         }
 
-        return response()->download($path, 'qr-' . $media->uuid . '.png', [
+        return response()->download($path, 'qr-'.$media->uuid.'.png', [
             'Content-Type' => 'image/png',
         ]);
     }
