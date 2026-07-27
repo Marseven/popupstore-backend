@@ -118,13 +118,29 @@ class ProductController extends Controller
         $cacheKey = $user ? 'products.featured.auth' : 'products.featured.public';
 
         $products = Cache::remember($cacheKey, 300, function () use ($user) {
-            return Product::active()
+            $featured = Product::active()
                 ->featured()
                 ->visibleTo($user)
                 ->with(['images', 'category'])
                 ->orderBy('sort_order')
                 ->limit(8)
                 ->get();
+
+            // Fallback: if there aren't enough featured products, top up with the
+            // most recent products so the section is never sparse.
+            if ($featured->count() < 5) {
+                $fill = Product::active()
+                    ->visibleTo($user)
+                    ->whereNotIn('id', $featured->pluck('id'))
+                    ->with(['images', 'category'])
+                    ->latest()
+                    ->limit(5 - $featured->count())
+                    ->get();
+
+                $featured = $featured->concat($fill);
+            }
+
+            return $featured->values();
         });
 
         return response()->json([
