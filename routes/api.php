@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\CampaignController as AdminCampaignController;
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\CollectionController as AdminCollectionController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\MerchantController as AdminMerchantController;
@@ -198,6 +200,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/products/{id}/stock', [AdminProductController::class, 'updateStock']);
         Route::get('/products/{id}/qr-download', [AdminProductController::class, 'downloadQr']);
 
+        // Collections management (also serves the revenue-share picker)
+        Route::get('/collections', [AdminCollectionController::class, 'index']);
+        Route::post('/collections', [AdminCollectionController::class, 'store']);
+        Route::put('/collections/{id}', [AdminCollectionController::class, 'update']);
+        Route::delete('/collections/{id}', [AdminCollectionController::class, 'destroy']);
+
+        // Categories management
+        Route::get('/categories', [AdminCategoryController::class, 'index']);
+        Route::post('/categories', [AdminCategoryController::class, 'store']);
+        Route::put('/categories/{id}', [AdminCategoryController::class, 'update']);
+        Route::delete('/categories/{id}', [AdminCategoryController::class, 'destroy']);
+
         // Shipping zones management
         Route::get('/shipping-zones', [AdminShippingZoneController::class, 'index']);
         Route::post('/shipping-zones', [AdminShippingZoneController::class, 'store']);
@@ -267,16 +281,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::put('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'update']);
             Route::delete('/collections/{collection}/revenue-shares/{id}', [AdminRevenueShareController::class, 'destroy']);
             Route::post('/payouts/{id}/mark-paid', [AdminPayoutController::class, 'markPaid']);
-
-            // Collections picker (revenue-share configuration, etc.)
-            Route::get('/collections', function () {
-                return response()->json([
-                    'collections' => \App\Models\Collection::query()
-                        ->select('id', 'name', 'type', 'owner_user_id')
-                        ->orderBy('name')
-                        ->get(),
-                ]);
-            });
 
             // Merchant enrolment management
             Route::get('/merchants', [AdminMerchantController::class, 'index']);
